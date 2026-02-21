@@ -1,0 +1,12 @@
+<h1>本日泊まれる宿（{{ people }}名）</h1>
+
+{% for h in hotels %}
+<h2>{{ h.name }}</h2>
+<p>料金：¥{{ h.price }}</p>
+<p>距離：{{ h.distance }}</p>
+<a href="{{ h.url }}" target="_blank">予約サイトへ</a>
+<hr>
+{% endfor %}
+
+<a href="/">← 戻る</a>
+

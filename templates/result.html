@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>検索結果</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  background: #111;
+  color: white;
+}
+
+.header {
+  background: linear-gradient(90deg, #7a0000, #d4af37);
+  padding: 20px;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 30px auto;
+}
+
+.card {
+  display: flex;
+  background: #1e1e1e;
+  margin-bottom: 20px;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: 0.2s;
+}
+
+.card:hover {
+  transform: scale(1.02);
+}
+
+.card img {
+  width: 250px;
+  height: 180px;
+  object-fit: cover;
+}
+
+.card-content {
+  padding: 15px;
+  flex: 1;
+}
+
+.price {
+  color: #ffd700;
+  font-size: 22px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.distance {
+  color: #ccc;
+}
+
+.button {
+  display: inline-block;
+  margin-top: 15px;
+  padding: 8px 15px;
+  background: #d4af37;
+  color: black;
+  border-radius: 5px;
+  text-decoration: none;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">5km以内の宿検索</div>
+
+<div class="container">
+
+<h2>「{{ place }}」周辺の宿</h2>
+
+{% if hotels %}
+  {% for h in hotels %}
+    <div class="card">
+      <img src="https://source.unsplash.com/400x300/?hotel,room&sig={{ loop.index }}">
+      <div class="card-content">
+        <h3>{{ h.name }}</h3>
+        <div class="price">料金: ¥{{ h.price }}</div>
+        <div class="distance">距離: {{ h.distance }} km</div>
+        <a class="button" href="{{ h.url }}" target="_blank">詳細を見る</a>
+      </div>
+    </div>
+  {% endfor %}
+{% else %}
+  <p>5km以内に宿が見つかりませんでした。</p>
+{% endif %}
+
+</div>
+
+</body>
+</html>
+
