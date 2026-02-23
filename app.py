@@ -3,7 +3,9 @@ import math
 
 app = Flask(__name__)
 
-# 観光地データ
+# =============================
+# 観光地
+# =============================
 destinations = {
     "美ら海水族館": {
         "name": "沖縄美ら海水族館",
@@ -12,7 +14,9 @@ destinations = {
     }
 }
 
+# =============================
 # 宿データ
+# =============================
 hotels = [
     {
         "name": "ロイヤルビューホテル美ら海",
@@ -51,36 +55,47 @@ hotels = [
     }
 ]
 
+# =============================
+# 距離計算
+# =============================
 def calculate_distance(lat1, lon1, lat2, lon2):
     R = 6371
     d_lat = math.radians(lat2 - lat1)
     d_lon = math.radians(lon2 - lon1)
-    a = (math.sin(d_lat/2) ** 2 +
-         math.cos(math.radians(lat1)) *
-         math.cos(math.radians(lat2)) *
-         math.sin(d_lon/2) ** 2)
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    a = (
+        math.sin(d_lat/2)**2 +
+        math.cos(math.radians(lat1)) *
+        math.cos(math.radians(lat2)) *
+        math.sin(d_lon/2)**2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
     return round(R * c, 2)
 
+# =============================
+# ルート
+# =============================
 @app.route("/", methods=["GET", "POST"])
 def home():
+
     results = []
     destination_name = ""
 
     if request.method == "POST":
-        destination_name = request.form.get("destination")
 
-        if destination_name in destinations:
-            destination = destinations[destination_name]
+        destination_name = request.form.get("destination", "").strip()
+
+        if "美ら海" in destination_name:
+            destination = destinations["美ら海水族館"]
 
             for hotel in hotels:
-                distance = calculate_distance(
+                hotel["distance"] = calculate_distance(
                     destination["lat"],
                     destination["lng"],
                     hotel["lat"],
                     hotel["lng"]
                 )
-                hotel["distance"] = distance
 
             results = sorted(hotels, key=lambda x: x["distance"])
 
@@ -91,4 +106,4 @@ def home():
     )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
