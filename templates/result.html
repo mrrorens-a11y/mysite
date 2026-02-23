@@ -19,7 +19,7 @@
 <p class="p1"><span class="s1"><b>&lt;head&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;meta charset="UTF-8"&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;</b></span></p>
-<p class="p1"><span class="s1"><b>&lt;title&gt;宿一覧&lt;/title&gt;</b></span></p>
+<p class="p1"><span class="s1"><b>&lt;title&gt;宿検索&lt;/title&gt;</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
 <p class="p1"><span class="s1"><b>&lt;style&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>body{</b></span></p>
@@ -29,22 +29,40 @@
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>padding:20px;</b></span></p>
 <p class="p1"><span class="s1"><b>}</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
-<p class="p1"><span class="s1"><b>.title{</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-size:20px;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-weight:bold;</b></span></p>
+<p class="p1"><span class="s1"><b>.search-box{</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:20px;</b></span></p>
+<p class="p1"><span class="s1"><b>}</b></span></p>
+<p class="p2"><span class="s1"><b></b></span><br></p>
+<p class="p1"><span class="s1"><b>input{</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>padding:10px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>width:70%;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border-radius:8px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border:1px solid #ccc;</b></span></p>
+<p class="p1"><span class="s1"><b>}</b></span></p>
+<p class="p2"><span class="s1"><b></b></span><br></p>
+<p class="p1"><span class="s1"><b>button{</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>padding:10px 15px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border:none;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border-radius:8px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>background:black;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>color:white;</b></span></p>
 <p class="p1"><span class="s1"><b>}</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
 <p class="p1"><span class="s1"><b>.card{</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>background:white;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>padding:15px;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border-radius:12px;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:15px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:20px;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>box-shadow:0 2px 8px rgba(0,0,0,0.1);</b></span></p>
 <p class="p1"><span class="s1"><b>}</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
+<p class="p1"><span class="s1"><b>.card img{</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>width:100%;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border-radius:10px;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:10px;</b></span></p>
+<p class="p1"><span class="s1"><b>}</b></span></p>
+<p class="p2"><span class="s1"><b></b></span><br></p>
 <p class="p1"><span class="s1"><b>.name{</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-size:16px;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-weight:bold;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:5px;</b></span></p>
 <p class="p1"><span class="s1"><b>}</b></span></p>
@@ -54,34 +72,32 @@
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-weight:bold;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>margin-bottom:10px;</b></span></p>
 <p class="p1"><span class="s1"><b>}</b></span></p>
-<p class="p2"><span class="s1"><b></b></span><br></p>
-<p class="p1"><span class="s1"><b>.button{</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>display:inline-block;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>padding:8px 12px;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>background:black;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>color:white;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>text-decoration:none;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>border-radius:8px;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>font-size:14px;</b></span></p>
-<p class="p1"><span class="s1"><b>}</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;/style&gt;</b></span></p>
-<p class="p2"><span class="s1"><b></b></span><br></p>
 <p class="p1"><span class="s1"><b>&lt;/head&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;body&gt;</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
-<p class="p1"><span class="s1"><b>&lt;div class="title"&gt;</b></span></p>
-<p class="p1"><span class="s1"><b>{{ destination.name }} 周辺の宿（距離順）</b></span></p>
+<p class="p1"><span class="s1"><b>&lt;div class="search-box"&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;form method="POST"&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">        </span>&lt;input type="text" name="destination" placeholder="例：美ら海水族館"&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">        </span>&lt;button type="submit"&gt;検索&lt;/button&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;/form&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;/div&gt;</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
-<p class="p1"><span class="s1"><b>{% for hotel in hotels %}</b></span></p>
+<p class="p1"><span class="s1"><b>{% if results %}</b></span></p>
+<p class="p1"><span class="s1"><b>&lt;h3&gt;{{ destination_name }} 周辺の宿&lt;/h3&gt;</b></span></p>
+<p class="p2"><span class="s1"><b></b></span><br></p>
+<p class="p1"><span class="s1"><b>{% for hotel in results %}</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;div class="card"&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;img src="{{ hotel.image }}"&gt;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;div class="name"&gt;{{ hotel.name }}&lt;/div&gt;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;div class="distance"&gt;{{ hotel.distance }} km&lt;/div&gt;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;a href="{{ hotel.url }}" target="_blank" class="button"&gt;</b></span></p>
-<p class="p1"><span class="s1"><b><span class="Apple-converted-space">        </span>公式サイトを見る</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;a href="{{ hotel.url }}" target="_blank"&gt;</b></span></p>
+<p class="p1"><span class="s1"><b><span class="Apple-converted-space">        </span>&lt;button&gt;公式サイトを見る&lt;/button&gt;</b></span></p>
 <p class="p1"><span class="s1"><b><span class="Apple-converted-space">    </span>&lt;/a&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;/div&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>{% endfor %}</b></span></p>
+<p class="p2"><span class="s1"><b></b></span><br></p>
+<p class="p1"><span class="s1"><b>{% endif %}</b></span></p>
 <p class="p2"><span class="s1"><b></b></span><br></p>
 <p class="p1"><span class="s1"><b>&lt;/body&gt;</b></span></p>
 <p class="p1"><span class="s1"><b>&lt;/html&gt;</b></span></p>
