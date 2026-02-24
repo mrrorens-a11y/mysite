@@ -77,7 +77,7 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 # ルート
 # =============================
 @app.route("/", methods=["GET", "POST"])
-def home():
+def index():
 
     results = []
     destination_name = ""
@@ -99,11 +99,13 @@ def home():
 
             results = sorted(hotels, key=lambda x: x["distance"])
 
-    return render_template(
-        "result.html",
-        results=results,
-        destination_name=destination_name
-    )
+            return render_template(
+                "result.html",
+                results=results,
+                destination_name=destination_name
+            )
+
+    return render_template("index.html")
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)git add .
+    app.run(host="0.0.0.0", port=10000)
