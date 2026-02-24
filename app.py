@@ -64,13 +64,13 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     d_lon = math.radians(lon2 - lon1)
 
     a = (
-        math.sin(d_lat/2)**2 +
+        math.sin(d_lat / 2) ** 2 +
         math.cos(math.radians(lat1)) *
         math.cos(math.radians(lat2)) *
-        math.sin(d_lon/2)**2
+        math.sin(d_lon / 2) ** 2
     )
 
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return round(R * c, 2)
 
 # =============================
@@ -79,9 +79,6 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 @app.route("/", methods=["GET", "POST"])
 def index():
 
-    results = []
-    destination_name = ""
-
     if request.method == "POST":
 
         destination_name = request.form.get("destination", "").strip()
@@ -89,15 +86,21 @@ def index():
         if "美ら海" in destination_name:
             destination = destinations["美ら海水族館"]
 
+            results = []
+
             for hotel in hotels:
-                hotel["distance"] = calculate_distance(
+                distance = calculate_distance(
                     destination["lat"],
                     destination["lng"],
                     hotel["lat"],
                     hotel["lng"]
                 )
 
-            results = sorted(hotels, key=lambda x: x["distance"])
+                hotel_with_distance = hotel.copy()
+                hotel_with_distance["distance"] = distance
+                results.append(hotel_with_distance)
+
+            results = sorted(results, key=lambda x: x["distance"])
 
             return render_template(
                 "result.html",
@@ -106,6 +109,7 @@ def index():
             )
 
     return render_template("index.html")
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
