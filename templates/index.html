@@ -1,17 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <meta charset="UTF-8">
-    <title>目的地検索</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DS:ヨナマイン</title>
+
+<style>
+
+/* ===== スマホファースト ===== */
+body{
+    margin:0;
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background:#ffffff;
+    color:#000;
+    text-align:center;
+}
+
+/* ロゴ */
+.logo{
+    font-size:28px;
+    font-weight:700;
+    margin-top:40px;
+    letter-spacing:2px;
+}
+
+/* 沖縄風ライン */
+.okinawa-line{
+    width:60px;
+    height:3px;
+    background:black;
+    margin:15px auto 30px auto;
+}
+
+/* 検索エリア */
+.search-area{
+    padding:20px;
+}
+
+/* 入力欄 */
+input{
+    width:100%;
+    padding:18px;
+    font-size:16px;
+    border:2px solid black;
+    border-radius:12px;
+    box-sizing:border-box;
+    margin-bottom:15px;
+}
+
+/* ボタン */
+button{
+    width:100%;
+    padding:18px;
+    font-size:16px;
+    border:none;
+    border-radius:12px;
+    background:black;
+    color:white;
+}
+
+/* 少し高級感 */
+button:active{
+    opacity:0.8;
+}
+
+</style>
 </head>
+
 <body>
 
-<h1>目的地検索</h1>
+<div class="logo">DS:ヨナマイン</div>
+<div class="okinawa-line"></div>
 
-<form method="POST">
-    <input type="text" name="destination" placeholder="例：美ら海水族館">
-    <button type="submit">検索</button>
-</form>
+<div class="search-area">
+    <form method="POST">
+        <input type="text" name="destination" placeholder="例：美ら海水族館">
+        <button type="submit">検索</button>
+    </form>
+</div>
 
 </body>
 </html>
