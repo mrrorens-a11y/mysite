@@ -3,38 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>DS:ヨナマイン</title>
+<title>とまるん</title>
 
 <style>
 
-/* ===== スマホファースト ===== */
+/* ===== スマホファースト設計 ===== */
+
 body{
     margin:0;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
     background:#ffffff;
     color:#000;
     text-align:center;
 }
 
-/* ロゴ */
+/* サービス名 */
 .logo{
-    font-size:28px;
+    font-size:30px;
     font-weight:700;
-    margin-top:40px;
+    margin-top:60px;
     letter-spacing:2px;
 }
 
-/* 沖縄風ライン */
-.okinawa-line{
-    width:60px;
-    height:3px;
-    background:black;
-    margin:15px auto 30px auto;
+/* キャッチコピー */
+.catch{
+    font-size:14px;
+    color:#555;
+    margin-top:10px;
+    margin-bottom:40px;
+    padding:0 20px;
 }
 
 /* 検索エリア */
 .search-area{
-    padding:20px;
+    padding:0 20px;
 }
 
 /* 入力欄 */
@@ -43,7 +45,7 @@ input{
     padding:18px;
     font-size:16px;
     border:2px solid black;
-    border-radius:12px;
+    border-radius:14px;
     box-sizing:border-box;
     margin-bottom:15px;
 }
@@ -54,14 +56,13 @@ button{
     padding:18px;
     font-size:16px;
     border:none;
-    border-radius:12px;
+    border-radius:14px;
     background:black;
     color:white;
 }
 
-/* 少し高級感 */
 button:active{
-    opacity:0.8;
+    opacity:0.85;
 }
 
 </style>
@@ -69,8 +70,8 @@ button:active{
 
 <body>
 
-<div class="logo">DS:ヨナマイン</div>
-<div class="okinawa-line"></div>
+<div class="logo">とまるん</div>
+<div class="catch">目的地から宿を探す新しいカタチ</div>
 
 <div class="search-area">
     <form method="POST">
