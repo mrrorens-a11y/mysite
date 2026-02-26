@@ -7,47 +7,87 @@
 
 <style>
 
-/* ===== スマホファースト設計 ===== */
-
+/* ===== ベース ===== */
 body{
     margin:0;
     font-family:-apple-system,BlinkMacSystemFont,sans-serif;
     background:#ffffff;
     color:#000;
     text-align:center;
+    overflow-x:hidden;
 }
 
-/* サービス名 */
+/* ===== フェードイン ===== */
+.fade-in{
+    opacity:0;
+    transform:translateY(20px);
+    animation:fadeIn 0.8s ease forwards;
+}
+
+@keyframes fadeIn{
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* ===== 波模様背景 ===== */
+.wave{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:220px;
+    background:linear-gradient(to bottom, #f8f8f8, white);
+    clip-path:ellipse(75% 60% at 50% 40%);
+    z-index:-1;
+}
+
+/* ===== ロゴ ===== */
 .logo{
-    font-size:30px;
+    font-size:32px;
     font-weight:700;
-    margin-top:60px;
+    margin-top:70px;
     letter-spacing:2px;
 }
 
-/* キャッチコピー */
+/* ===== キャッチ ===== */
 .catch{
     font-size:14px;
     color:#555;
     margin-top:10px;
-    margin-bottom:40px;
+    margin-bottom:35px;
+}
+
+/* ===== 検索エリア ===== */
+.search-area{
     padding:0 20px;
 }
 
-/* 検索エリア */
-.search-area{
-    padding:0 20px;
+/* 入力欄ラッパー */
+.input-wrapper{
+    position:relative;
+    margin-bottom:15px;
+}
+
+/* 🔍アイコン */
+.input-wrapper span{
+    position:absolute;
+    left:15px;
+    top:50%;
+    transform:translateY(-50%);
+    font-size:16px;
+    color:#888;
 }
 
 /* 入力欄 */
 input{
     width:100%;
-    padding:18px;
+    padding:18px 18px 18px 40px;
     font-size:16px;
     border:2px solid black;
     border-radius:14px;
     box-sizing:border-box;
-    margin-bottom:15px;
 }
 
 /* ボタン */
@@ -65,19 +105,56 @@ button:active{
     opacity:0.85;
 }
 
+/* ===== 人気スポット ===== */
+.popular{
+    margin-top:40px;
+    padding:0 20px;
+}
+
+.popular-title{
+    font-size:14px;
+    margin-bottom:10px;
+    color:#777;
+}
+
+.popular button{
+    background:white;
+    color:black;
+    border:1px solid black;
+    margin-bottom:10px;
+}
+
 </style>
 </head>
 
 <body>
 
-<div class="logo">とまるん</div>
-<div class="catch">目的地から宿を探す新しいカタチ</div>
+<div class="wave"></div>
 
-<div class="search-area">
+<div class="logo fade-in">とまるん</div>
+<div class="catch fade-in">目的地に近い宿をかんたん検索</div>
+
+<div class="search-area fade-in">
     <form method="POST">
-        <input type="text" name="destination" placeholder="例：美ら海水族館">
+
+        <div class="input-wrapper">
+            <span>🔍</span>
+            <input type="text" name="destination" placeholder="例：美ら海水族館">
+        </div>
+
         <button type="submit">検索</button>
+
     </form>
+</div>
+
+<div class="popular fade-in">
+    <div class="popular-title">人気スポット</div>
+
+    <form method="POST">
+        <input type="hidden" name="destination" value="美ら海水族館">
+        <button type="submit">美ら海水族館</button>
+    </form>
+
 </div>
 
 </body>
