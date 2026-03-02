@@ -1,161 +1,70 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>とまるん</title>
-
-<style>
-
-/* ===== ベース ===== */
-body{
-    margin:0;
-    font-family:-apple-system,BlinkMacSystemFont,sans-serif;
-    background:#ffffff;
-    color:#000;
-    text-align:center;
-    overflow-x:hidden;
-}
-
-/* ===== フェードイン ===== */
-.fade-in{
-    opacity:0;
-    transform:translateY(20px);
-    animation:fadeIn 0.8s ease forwards;
-}
-
-@keyframes fadeIn{
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-}
-
-/* ===== 波模様背景 ===== */
-.wave{
-    position:absolute;
-    top:0;
-    left:0;
-    width:100%;
-    height:220px;
-    background:linear-gradient(to bottom, #f8f8f8, white);
-    clip-path:ellipse(75% 60% at 50% 40%);
-    z-index:-1;
-}
-
-/* ===== ロゴ ===== */
-.logo{
-    font-size:32px;
-    font-weight:700;
-    margin-top:70px;
-    letter-spacing:2px;
-}
-
-/* ===== キャッチ ===== */
-.catch{
-    font-size:14px;
-    color:#555;
-    margin-top:10px;
-    margin-bottom:35px;
-}
-
-/* ===== 検索エリア ===== */
-.search-area{
-    padding:0 20px;
-}
-
-/* 入力欄ラッパー */
-.input-wrapper{
-    position:relative;
-    margin-bottom:15px;
-}
-
-/* 🔍アイコン */
-.input-wrapper span{
-    position:absolute;
-    left:15px;
-    top:50%;
-    transform:translateY(-50%);
-    font-size:16px;
-    color:#888;
-}
-
-/* 入力欄 */
-input{
-    width:100%;
-    padding:18px 18px 18px 40px;
-    font-size:16px;
-    border:2px solid black;
-    border-radius:14px;
-    box-sizing:border-box;
-}
-
-/* ボタン */
-button{
-    width:100%;
-    padding:18px;
-    font-size:16px;
-    border:none;
-    border-radius:14px;
-    background:black;
-    color:white;
-}
-
-button:active{
-    opacity:0.85;
-}
-
-/* ===== 人気スポット ===== */
-.popular{
-    margin-top:40px;
-    padding:0 20px;
-}
-
-.popular-title{
-    font-size:14px;
-    margin-bottom:10px;
-    color:#777;
-}
-
-.popular button{
-    background:white;
-    color:black;
-    border:1px solid black;
-    margin-bottom:10px;
-}
-
-</style>
+    <meta charset="UTF-8">
+    <title>宿検索</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
 
-<div class="wave"></div>
+<h2>目的地検索</h2>
 
-<div class="logo fade-in">とまるん</div>
-<div class="catch fade-in">目的地に近い宿をかんたん検索</div>
+<input type="text" id="keyword" placeholder="例：沖縄">
+<button type="button" onclick="searchHotels()">検索</button>
 
-<div class="search-area fade-in">
-    <form method="POST">
+<hr>
 
-        <div class="input-wrapper">
-            <span>🔍</span>
-            <input type="text" name="destination" placeholder="例：美ら海水族館">
-        </div>
+<div id="results"></div>
 
-        <button type="submit">検索</button>
+<script>
+const APPLICATION_ID = "99c6687c-934b-461a-91d2-cccac125bba8";
+const ACCESS_KEY = "pk_X0YMu5r1uH81LhQSx9jkv4w3yEcBaAQ9T1XvueirvEH";
 
-    </form>
-</div>
+async function searchHotels() {
+    const keyword = document.getElementById("keyword").value;
 
-<div class="popular fade-in">
-    <div class="popular-title">人気スポット</div>
+    if (!keyword) {
+        alert("目的地を入力してください");
+        return;
+    }
 
-    <form method="POST">
-        <input type="hidden" name="destination" value="美ら海水族館">
-        <button type="submit">美ら海水族館</button>
-    </form>
+    const url = `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?format=json&keyword=${encodeURIComponent(keyword)}&applicationId=${APPLICATION_ID}&accessKey=${ACCESS_KEY}`;
 
-</div>
+    try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        const resultsDiv = document.getElementById("results");
+        resultsDiv.innerHTML = "";
+
+        if (!data.hotels) {
+            resultsDiv.innerHTML = "ホテルが見つかりませんでした";
+            return;
+        }
+
+        data.hotels.forEach(hotel => {
+            const info = hotel.hotel[0].hotelBasicInfo;
+
+            const html = `
+                <div style="border:1px solid #ccc; padding:15px; margin:15px 0;">
+                    <h3>${info.hotelName}</h3>
+                    <p>最安料金： ¥${info.hotelMinCharge ?? "情報なし"}</p>
+                    <p>住所： ${info.address1}${info.address2}</p>
+                    <a href="${info.hotelInformationUrl}" target="_blank">
+                        楽天で見る
+                    </a>
+                </div>
+            `;
+
+            resultsDiv.innerHTML += html;
+        });
+
+    } catch (error) {
+        document.getElementById("results").innerHTML = "エラーが発生しました";
+        console.error(error);
+    }
+}
+</script>
 
 </body>
 </html>
