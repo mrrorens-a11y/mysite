@@ -1,51 +1,35 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<title>目的地周辺ホテル検索</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body { font-family: sans-serif; padding:20px; }
-input { padding:8px; width:250px; }
-button { padding:8px 15px; cursor:pointer; }
-.card {
-    border:1px solid #ddd;
-    border-radius:8px;
-    padding:15px;
-    margin:15px 0;
-}
-</style>
+    <meta charset="UTF-8">
+    <title>宿検索</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
-<h2>目的地周辺ホテル検索</h2>
+<h2>目的地検索</h2>
 
-<input type="text" id="keyword" placeholder="例：沖縄 美ら海水族館">
-<button onclick="searchHotels()">検索</button>
+<input type="text" id="keyword" placeholder="例：沖縄">
+<button type="button" onclick="searchHotels()">検索</button>
 
 <hr>
+
 <div id="results"></div>
 
 <script>
 const APPLICATION_ID = "99c6687c-934b-461a-91d2-cccac125bba8";
-const AFFILIATE_ID = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e"; // なければ削除可
+const ACCESS_KEY = "pk_X0YMu5r1uH81LhQSx9jkv4w3yEcBaAQ9T1XvueirvEH";
+const AFFILIATE_ID = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e";
 
 async function searchHotels() {
-
     const keyword = document.getElementById("keyword").value;
+
     if (!keyword) {
         alert("目的地を入力してください");
         return;
     }
 
-    const url =
-      `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?` +
-      `format=json` +
-      `&keyword=${encodeURIComponent(keyword)}` +
-      `&applicationId=${APPLICATION_ID}` +
-      `&affiliateId=${AFFILIATE_ID}` +
-      `&responseType=small`;
+    const url = `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?format=json&keyword=${encodeURIComponent(keyword)}&applicationId=${APPLICATION_ID}&accessKey=${ACCESS_KEY}&affiliateId=${AFFILIATE_ID}`;
 
     try {
         const response = await fetch(url);
@@ -59,30 +43,21 @@ async function searchHotels() {
             return;
         }
 
-        // 距離順ソート（distanceがある場合）
-        const sortedHotels = data.hotels.sort((a, b) => {
-            const d1 = a.hotel[0].hotelBasicInfo.distance || 999999;
-            const d2 = b.hotel[0].hotelBasicInfo.distance || 999999;
-            return d1 - d2;
-        });
-
-        sortedHotels.forEach(hotel => {
-
+        data.hotels.forEach(hotel => {
             const info = hotel.hotel[0].hotelBasicInfo;
 
-            const card = `
-                <div class="card">
+            const html = `
+                <div style="border:1px solid #ccc; padding:15px; margin:15px 0;">
                     <h3>${info.hotelName}</h3>
                     <p>最安料金： ¥${info.hotelMinCharge ?? "情報なし"}</p>
                     <p>住所： ${info.address1}${info.address2}</p>
-                    <p>距離： ${info.distance ?? "不明"} km</p>
                     <a href="${info.hotelInformationUrl}" target="_blank">
                         楽天で見る
                     </a>
                 </div>
             `;
 
-            resultsDiv.innerHTML += card;
+            resultsDiv.innerHTML += html;
         });
 
     } catch (error) {
