@@ -1,174 +1,57 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>とまるん</title>
-
-<style>
-body {
-    margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #f5f7fa;
-}
-
-.container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.title {
-    font-size: 32px;
-    font-weight: bold;
-    text-align: center;
-    margin-top: 40px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #666;
-    margin-bottom: 30px;
-}
-
-.search-box {
-    display: flex;
-    gap: 10px;
-}
-
-input {
-    flex: 1;
-    padding: 14px;
-    border-radius: 10px;
-    border: 1px solid #ddd;
-    font-size: 16px;
-}
-
-button {
-    padding: 14px 18px;
-    border-radius: 10px;
-    border: none;
-    background: black;
-    color: white;
-    font-size: 16px;
-}
-
-.card {
-    background: white;
-    border-radius: 16px;
-    padding: 16px;
-    margin-top: 20px;
-    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
-}
-
-.card h3 {
-    margin: 0 0 8px 0;
-}
-
-.price {
-    font-weight: bold;
-    margin-bottom: 8px;
-}
-
-.link-btn {
-    display: inline-block;
-    margin-top: 10px;
-    padding: 10px 14px;
-    background: #bf0000;
-    color: white;
-    border-radius: 8px;
-    text-decoration: none;
-}
-</style>
-
+  <meta charset="UTF-8">
+  <title>ホテル検索</title>
 </head>
 <body>
+  <h1>目的地周辺ホテル検索</h1>
 
-<div class="container">
+  <input type="text" id="keyword" placeholder="例：美ら海水族館">
+  <button onclick="searchHotels()">検索</button>
 
-<div class="title">とまるん</div>
-<div class="subtitle">目的地を入力するだけ。かんたんホテル探し。</div>
+  <div id="results"></div>
 
-<div class="search-box">
-<input type="text" id="keyword" placeholder="例：沖縄">
-<button onclick="searchHotels()">検索</button>
-</div>
+  <script>
+    async function searchHotels() {
+      const keyword = document.getElementById("keyword").value;
 
-<div id="results"></div>
+      const applicationId = "99c6687c-934b-461a-91d2-cccac125bba8";
+      const affiliateId = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e";
 
-</div>
+      const url =
+        `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?` +
+        `format=json&keyword=${encodeURIComponent(keyword)}` +
+        `&applicationId=${applicationId}` +
+        `&affiliateId=${affiliateId}` +
+        `&hits=20`;
 
-<script>
-const APPLICATION_ID = "99c6687c-934b-461a-91d2-cccac125bba8";
-const AFFILIATE_ID = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e";
+      const response = await fetch(url);
+      const data = await response.json();
 
-async function searchHotels() {
+      const resultsDiv = document.getElementById("results");
+      resultsDiv.innerHTML = "";
 
-const keyword = document.getElementById("keyword").value;
-if(!keyword) return;
+      if (!data.hotels) {
+        resultsDiv.innerHTML = "結果がありません";
+        return;
+      }
 
-const geoRes = await fetch(`https://msearch.gsi.go.jp/address-search/AddressSearch?q=${keyword}`);
-const geoData = await geoRes.json();
+      data.hotels.forEach(hotel => {
+        const info = hotel.hotel[0].hotelBasicInfo;
 
-if(!geoData[0]) {
-    alert("場所が見つかりません");
-    return;
-}
-
-const userLat = geoData[0].geometry.coordinates[1];
-const userLng = geoData[0].geometry.coordinates[0];
-
-const url = `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?format=json&keyword=${encodeURIComponent(keyword)}&applicationId=${APPLICATION_ID}&hits=20`;
-
-const res = await fetch(url);
-const data = await res.json();
-
-if(!data.hotels) return;
-
-let hotels = data.hotels.map(h => {
-    const info = h.hotel[0].hotelBasicInfo;
-    const lat = parseFloat(info.latitude);
-    const lng = parseFloat(info.longitude);
-    const distance = getDistance(userLat,userLng,lat,lng);
-    return {info, distance};
-});
-
-hotels.sort((a,b)=>a.distance - b.distance);
-
-const results = document.getElementById("results");
-results.innerHTML = "";
-
-hotels.forEach(h => {
-
-const affiliateUrl = h.info.hotelInformationUrl + `?scid=af_pc_etc&afl=${AFFILIATE_ID}`;
-
-results.innerHTML += `
-<div class="card">
-<h3>${h.info.hotelName}</h3>
-<div class="price">¥${h.info.hotelMinCharge ?? "料金情報なし"}</div>
-<div>距離：約 ${h.distance.toFixed(1)} km</div>
-<a class="link-btn" href="${affiliateUrl}" target="_blank">
-楽天で予約する
-</a>
-</div>
-`;
-});
-
-}
-
-function getDistance(lat1, lon1, lat2, lon2) {
-const R = 6371;
-const dLat = (lat2-lat1) * Math.PI/180;
-const dLon = (lon2-lon1) * Math.PI/180;
-const a =
-Math.sin(dLat/2) * Math.sin(dLat/2) +
-Math.cos(lat1*Math.PI/180) *
-Math.cos(lat2*Math.PI/180) *
-Math.sin(dLon/2) * Math.sin(dLon/2);
-const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-return R * c;
-}
-</script>
-
+        const hotelDiv = document.createElement("div");
+        hotelDiv.innerHTML = `
+          <h3>${info.hotelName}</h3>
+          <p>${info.address1}${info.address2}</p>
+          <a href="${info.hotelInformationUrl}" target="_blank">
+            楽天で見る
+          </a>
+          <hr>
+        `;
+        resultsDiv.appendChild(hotelDiv);
+      });
+    }
+  </script>
 </body>
 </html>
