@@ -1,101 +1,44 @@
 import os
-import math
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# 環境変数
-RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
-RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
+# Renderの環境変数から取得（nanoで直接書き込んでも動きますが、公開時は環境変数を推奨）
+RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID', 'あなたのアプリID')
+RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY', 'あなたのアクセスキー')
+RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID', 'あなたのアフィリエイトID')
 
-if not RAKUTEN_APP_ID:
-    raise ValueError("RAKUTEN_APP_ID is not set")
+# 新ドメインのエンドポイント
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# 観光地データベース（あとから追加可能）
-DESTINATIONS = {
-    "沖縄美ら海水族館": {"lat": 26.69451309310509, "lng": 127.87801499848918},
-    "ウッパマビーチ": {"lat": 26.692852017176595, "lng": 127.99204980657072},
-}
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    hotels = []
+    keyword = ""
+    if request.method == 'POST':
+        keyword = request.form.get('keyword')
+        if keyword:
+            params = {
+                "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
+                "affiliateId": RAKUTEN_AFFILIATE_ID,
+                "format": "json",
+                "keyword": keyword,
+                "hits": 15  # 表示件数
+            }
+            res = requests.get(RAKUTEN_API_URL, params=params)
+            if res.status_code == 200:
+                data = res.json()
+                if 'hotels' in data:
+                    # APIの階層構造から必要な情報を抽出
+                    for h in data['hotels']:
+                        info = h['hotel'][0]['hotelBasicInfo']
+                        hotels.append(info)
+            else:
+                print(f"Error: {res.status_code}")
 
-# 距離計算（ハーバーサイン）
-def get_distance(lat1, lon1, lat2, lon2):
-    R = 6371
-    dLat = math.radians(lat2 - lat1)
-    dLon = math.radians(lon2 - lon1)
+    return render_template('index.html', hotels=hotels, keyword=keyword)
 
-    a = (
-        math.sin(dLat/2) ** 2
-        + math.cos(math.radians(lat1))
-        * math.cos(math.radians(lat2))
-        * math.sin(dLon/2) ** 2
-    )
-
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
-
-
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
-@app.route("/search")
-def search():
-    keyword = request.args.get("keyword")
-
-    if not keyword:
-        return jsonify({"error": "keyword required"}), 400
-
-    if keyword not in DESTINATIONS:
-        return jsonify({"error": "目的地が見つかりません"})
-
-    center_lat = DESTINATIONS[keyword]["lat"]
-    center_lon = DESTINATIONS[keyword]["lng"]
-
-    url = "https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426"
-
-    params = {
-        "format": "json",
-        "latitude": center_lat,
-        "longitude": center_lon,
-        "searchRadius": 5,
-        "hits": 30,
-        "applicationId": RAKUTEN_APP_ID,
-    }
-
-    # affiliateId が設定されている場合のみ追加
-    if RAKUTEN_AFFILIATE_ID:
-        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
-
-    response = requests.get(url, params=params)
-    data = response.json()
-
-    # 🔥 デバッグ表示（問題があればそのまま出す）
-    if "hotels" not in data:
-        return jsonify({"rakuten_response": data})
-
-    results = []
-
-    for h in data["hotels"]:
-        info = h["hotel"][0]["hotelBasicInfo"]
-
-        lat = float(info["latitude"])
-        lon = float(info["longitude"])
-
-        distance = get_distance(center_lat, center_lon, lat, lon)
-
-        results.append({
-            "name": info["hotelName"],
-            "price": info.get("hotelMinCharge"),
-            "url": info["hotelInformationUrl"],
-            "distance": round(distance, 2)
-        })
-
-    results.sort(key=lambda x: x["distance"])
-
-    return jsonify({"hotels": results})
-
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
+if __name__ == '__main__':
+    app.run(debug=True)

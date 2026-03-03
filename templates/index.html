@@ -1,60 +1,49 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>とまるん</title>
-<style>
-body { font-family: sans-serif; margin: 0; padding: 15px; background:#f5f5f5;}
-.card { background:white; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
-.price { color:#B12704; font-weight:bold;}
-.distance { color:#555;}
-button { padding:10px 15px; background:#FF9900; border:none; border-radius:5px;}
-input { padding:10px; width:70%; }
-</style>
+    <meta charset="UTF-8">
+    <title>TOMARUN - 目的地から宿を探す</title>
+    <style>
+        body { font-family: sans-serif; background: #f6f6f6; margin: 0; padding: 20px; }
+        .search-container { text-align: center; margin-bottom: 30px; }
+        .hotel-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); 
+            gap: 20px; max-width: 1200px; margin: 0 auto; 
+        }
+        .hotel-card { 
+            background: white; border: 1px solid #ddd; border-radius: 4px; 
+            padding: 15px; display: flex; flex-direction: column; 
+        }
+        .hotel-card img { width: 100%; height: 150px; object-fit: cover; border-radius: 4px; }
+        .hotel-name { font-weight: bold; font-size: 1.1em; margin: 10px 0; height: 3em; overflow: hidden; }
+        .price { color: #B12704; font-size: 1.2em; font-weight: bold; }
+        .reserve-btn { 
+            background: #FFD814; border: 1px solid #FCD200; border-radius: 8px;
+            padding: 10px; text-align: center; text-decoration: none; color: #0f1111;
+            margin-top: auto; font-weight: bold;
+        }
+    </style>
 </head>
 <body>
+    <div class="search-container">
+        <h1>TOMARUN (とまるん)</h1>
+        <form method="POST">
+            <input type="text" name="keyword" placeholder="目的地（例：箱根、東京タワー）" value="{{ keyword }}" style="padding: 10px; width: 300px;">
+            <button type="submit" style="padding: 10px;">検索</button>
+        </form>
+    </div>
 
-<h2>目的地検索</h2>
-
-<input type="text" id="keyword" placeholder="沖縄美ら海水族館">
-<button onclick="searchHotels()">検索</button>
-
-<hr>
-<div id="results"></div>
-
-<script>
-async function searchHotels() {
-
-    const keyword = document.getElementById("keyword").value;
-
-    const res = await fetch(`/search?keyword=${encodeURIComponent(keyword)}`);
-    const data = await res.json();
-
-    const resultsDiv = document.getElementById("results");
-    resultsDiv.innerHTML = "";
-
-    if (!data.hotels || data.hotels.length === 0) {
-        resultsDiv.innerHTML = "宿が見つかりません";
-        return;
-    }
-
-    data.hotels.forEach(h => {
-        const card = `
-        <div class="card">
-            <h3>${h.name}</h3>
-            <div class="price">¥${h.price ?? "料金情報なし"}</div>
-            <div class="distance">目的地から ${h.distance} km</div>
-            <br>
-            <a href="${h.url}" target="_blank">
-                <button>楽天で見る</button>
-            </a>
+    <div class="hotel-grid">
+        {% for hotel in hotels %}
+        <div class="hotel-card">
+            <img src="{{ hotel.hotelImageUrl }}" alt="{{ hotel.hotelName }}">
+            <div class="hotel-name">{{ hotel.hotelName }}</div>
+            <div class="price">最安値: ¥{{ hotel.hotelMinCharge if hotel.hotelMinCharge else '---' }}〜</div>
+            <p style="font-size: 0.8em; color: #555;">{{ hotel.hotelInformationUrl[:50] }}...</p>
+            <a href="{{ hotel.affiliateUrl }}" class="reserve-btn" target="_blank">楽天トラベルで予約</a>
         </div>
-        `;
-        resultsDiv.innerHTML += card;
-    });
-}
-</script>
-
+        {% endfor %}
+    </div>
 </body>
 </html>
