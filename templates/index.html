@@ -2,28 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>とまるん</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>とまるん</title>
+<style>
+body { font-family: sans-serif; margin: 0; padding: 15px; background:#f5f5f5;}
+.card { background:white; padding:15px; margin-bottom:15px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);}
+.price { color:#B12704; font-weight:bold;}
+.distance { color:#555;}
+button { padding:10px 15px; background:#FF9900; border:none; border-radius:5px;}
+input { padding:10px; width:70%; }
+</style>
 </head>
 <body>
 
-<h2>目的地検索（近い順）</h2>
+<h2>目的地検索</h2>
 
-<input type="text" id="keyword" placeholder="例：沖縄美ら海水族館">
+<input type="text" id="keyword" placeholder="沖縄美ら海水族館">
 <button onclick="searchHotels()">検索</button>
 
 <hr>
 <div id="results"></div>
 
 <script>
-
 async function searchHotels() {
 
     const keyword = document.getElementById("keyword").value;
-    if (!keyword) {
-        alert("目的地を入力してください");
-        return;
-    }
 
     const res = await fetch(`/search?keyword=${encodeURIComponent(keyword)}`);
     const data = await res.json();
@@ -32,23 +35,25 @@ async function searchHotels() {
     resultsDiv.innerHTML = "";
 
     if (!data.hotels || data.hotels.length === 0) {
-        resultsDiv.innerHTML = "ホテルが見つかりません";
+        resultsDiv.innerHTML = "宿が見つかりません";
         return;
     }
 
     data.hotels.forEach(h => {
-        const html = `
-        <div style="border:1px solid #ccc;padding:15px;margin:15px 0;">
+        const card = `
+        <div class="card">
             <h3>${h.name}</h3>
-            <p>料金： ¥${h.price ?? "情報なし"}</p>
-            <p>距離： ${h.distance} km</p>
-            <a href="${h.url}" target="_blank">楽天で見る</a>
+            <div class="price">¥${h.price ?? "料金情報なし"}</div>
+            <div class="distance">目的地から ${h.distance} km</div>
+            <br>
+            <a href="${h.url}" target="_blank">
+                <button>楽天で見る</button>
+            </a>
         </div>
         `;
-        resultsDiv.innerHTML += html;
+        resultsDiv.innerHTML += card;
     });
 }
-
 </script>
 
 </body>
