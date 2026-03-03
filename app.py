@@ -5,18 +5,20 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
+# 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 
 if not RAKUTEN_APP_ID:
     raise ValueError("RAKUTEN_APP_ID is not set")
 
-# 🔥 観光地データベース（あとから追加可能）
+# 観光地データベース（あとから追加可能）
 DESTINATIONS = {
     "沖縄美ら海水族館": {"lat": 26.69451309310509, "lng": 127.87801499848918},
     "ウッパマビーチ": {"lat": 26.692852017176595, "lng": 127.99204980657072},
 }
 
+# 距離計算（ハーバーサイン）
 def get_distance(lat1, lon1, lat2, lon2):
     R = 6371
     dLat = math.radians(lat2 - lat1)
@@ -42,6 +44,9 @@ def home():
 def search():
     keyword = request.args.get("keyword")
 
+    if not keyword:
+        return jsonify({"error": "keyword required"}), 400
+
     if keyword not in DESTINATIONS:
         return jsonify({"error": "目的地が見つかりません"})
 
@@ -57,14 +62,18 @@ def search():
         "searchRadius": 5,
         "hits": 30,
         "applicationId": RAKUTEN_APP_ID,
-        "affiliateId": RAKUTEN_AFFILIATE_ID
     }
 
-    res = requests.get(url, params=params)
-    data = res.json()
+    # affiliateId が設定されている場合のみ追加
+    if RAKUTEN_AFFILIATE_ID:
+        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # 🔥 デバッグ表示（問題があればそのまま出す）
     if "hotels" not in data:
-        return jsonify({"hotels": []})
+        return jsonify({"rakuten_response": data})
 
     results = []
 
