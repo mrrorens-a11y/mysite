@@ -1,53 +1,101 @@
 import os
+import math
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-# --- 設定情報 (Renderの環境変数から読み込みます) ---
-# もし直接書き込む場合は 'あなたのID' を消して書き換えてください
-RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID', 'あなたのアプリID')
-RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY', 'あなたのアクセスキー')
-RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID', 'あなたのアフィリエイトID')
+# 環境変数
+RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 
-# 2026年からの新エンドポイント (openapi.rakuten.co.jp)
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+if not RAKUTEN_APP_ID:
+    raise ValueError("RAKUTEN_APP_ID is not set")
 
-@app.route('/', methods=['GET', 'POST'])
-def index():
-    hotels = []
-    keyword = ""
-    if request.method == 'POST':
-        keyword = request.form.get('keyword')
-        if keyword:
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
-                "affiliateId": RAKUTEN_AFFILIATE_ID,
-                "format": "json",
-                "keyword": keyword,
-                "hits": 20  # Amazon風にたくさん並べるため20件取得
-            }
-            try:
-                res = requests.get(RAKUTEN_API_URL, params=params)
-                if res.status_code == 200:
-                    data = res.json()
-                    # 楽天API特有の深い階層からデータを取り出す
-                    if 'hotels' in data:
-                        for h in data['hotels']:
-                            # 基本情報を取り出してリストに追加
-                            info = h['hotel'][0]['hotelBasicInfo']
-                            hotels.append(info)
-                else:
-                    print(f"API Error: {res.status_code}")
-            except Exception as e:
-                print(f"Error during API request: {e}")
+# 観光地データベース（あとから追加可能）
+DESTINATIONS = {
+    "沖縄美ら海水族館": {"lat": 26.69451309310509, "lng": 127.87801499848918},
+    "ウッパマビーチ": {"lat": 26.692852017176595, "lng": 127.99204980657072},
+}
 
-    return render_template('index.html', hotels=hotels, keyword=keyword)
+# 距離計算（ハーバーサイン）
+def get_distance(lat1, lon1, lat2, lon2):
+    R = 6371
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
 
-# --- Renderで動かすための重要な設定 ---
+    a = (
+        math.sin(dLat/2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dLon/2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
+
+@app.route("/")
+def home():
+    return render_template("index.html")
+
+
+@app.route("/search")
+def search():
+    keyword = request.args.get("keyword")
+
+    if not keyword:
+        return jsonify({"error": "keyword required"}), 400
+
+    if keyword not in DESTINATIONS:
+        return jsonify({"error": "目的地が見つかりません"})
+
+    center_lat = DESTINATIONS[keyword]["lat"]
+    center_lon = DESTINATIONS[keyword]["lng"]
+
+    url = "https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426"
+
+    params = {
+        "format": "json",
+        "latitude": center_lat,
+        "longitude": center_lon,
+        "searchRadius": 5,
+        "hits": 30,
+        "applicationId": RAKUTEN_APP_ID,
+    }
+
+    # affiliateId が設定されている場合のみ追加
+    if RAKUTEN_AFFILIATE_ID:
+        params["affiliateId"] = RAKUTEN_AFFILIATE_ID
+
+    response = requests.get(url, params=params)
+    data = response.json()
+
+    # 🔥 デバッグ表示（問題があればそのまま出す）
+    if "hotels" not in data:
+        return jsonify({"rakuten_response": data})
+
+    results = []
+
+    for h in data["hotels"]:
+        info = h["hotel"][0]["hotelBasicInfo"]
+
+        lat = float(info["latitude"])
+        lon = float(info["longitude"])
+
+        distance = get_distance(center_lat, center_lon, lat, lon)
+
+        results.append({
+            "name": info["hotelName"],
+            "price": info.get("hotelMinCharge"),
+            "url": info["hotelInformationUrl"],
+            "distance": round(distance, 2)
+        })
+
+    results.sort(key=lambda x: x["distance"])
+
+    return jsonify({"hotels": results})
+
+
 if __name__ == "__main__":
-    # Renderは環境変数 PORT を指定してくるので、それに合わせます
-    port = int(os.environ.get("PORT", 10000))
-    # host="0.0.0.0" にすることで外部からのアクセスを許可します
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)
