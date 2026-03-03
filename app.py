@@ -1,39 +1,111 @@
-from flask import Flask, render_template, request, jsonify
-import requests
 import os
+import math
+import requests
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-RAKUTEN_APP_ID = "99c6687c-934b-461a-91d2-cccac125bba8"
-RAKUTEN_ACCESS_KEY = "pk_d9C17gWx15sJvd3zfV6c1vXvKjrsSbd8rFSOOf1K0jY"
-RAKUTEN_AFFILIATE_ID = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e"
+RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
+
+if not RAKUTEN_APP_ID:
+    raise ValueError("RAKUTEN_APP_ID is not set in environment variables")
+
+
+def get_distance(lat1, lon1, lat2, lon2):
+    R = 6371
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(dLat/2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dLon/2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
+
 
 @app.route("/")
-def index():
+def home():
     return render_template("index.html")
+
 
 @app.route("/search")
 def search():
     keyword = request.args.get("keyword")
 
-    url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+    if not keyword:
+        return jsonify({"error": "keyword required"}), 400
 
-    headers = {
-        "X-Rakuten-Application-Id": RAKUTEN_APP_ID,
-        "X-Rakuten-Access-Key": RAKUTEN_ACCESS_KEY
-    }
-
-    params = {
+    # 🔥 まずキーワード検索
+    keyword_url = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
+    keyword_params = {
         "format": "json",
         "keyword": keyword,
-        "affiliateId": RAKUTEN_AFFILIATE_ID,
-        "hits": 20
+        "applicationId": RAKUTEN_APP_ID
     }
 
-    res = requests.get(url, headers=headers, params=params)
+    keyword_res = requests.get(keyword_url, params=keyword_params)
+    keyword_data = keyword_res.json()
 
-    return jsonify(res.json())
+    if "hotels" not in keyword_data:
+        return jsonify({"hotels": []})
+
+    center = keyword_data["hotels"][0]["hotel"][0]["hotelBasicInfo"]
+
+    center_lat = center.get("latitude")
+    center_lon = center.get("longitude")
+
+    if not center_lat or not center_lon:
+        return jsonify({"hotels": []})
+
+    # 🔥 周辺検索
+    simple_url = "https://app.rakuten.co.jp/services/api/Travel/SimpleHotelSearch/20170426"
+    simple_params = {
+        "format": "json",
+        "latitude": center_lat,
+        "longitude": center_lon,
+        "searchRadius": 3,
+        "applicationId": RAKUTEN_APP_ID
+    }
+
+    simple_res = requests.get(simple_url, params=simple_params)
+    simple_data = simple_res.json()
+
+    if "hotels" not in simple_data:
+        return jsonify({"hotels": []})
+
+    results = []
+
+    for h in simple_data["hotels"]:
+        info = h["hotel"][0]["hotelBasicInfo"]
+
+        lat = info.get("latitude")
+        lon = info.get("longitude")
+
+        if not lat or not lon:
+            continue
+
+        distance = get_distance(
+            float(center_lat),
+            float(center_lon),
+            float(lat),
+            float(lon)
+        )
+
+        results.append({
+            "name": info.get("hotelName"),
+            "price": info.get("hotelMinCharge"),
+            "url": info.get("hotelInformationUrl"),
+            "distance": round(distance, 2)
+        })
+
+    results.sort(key=lambda x: x["distance"])
+
+    return jsonify({"hotels": results})
+
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=10000)

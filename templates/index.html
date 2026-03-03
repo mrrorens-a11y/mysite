@@ -2,39 +2,20 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>とまるん - 距離順検索</title>
+<title>とまるん</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
 <h2>目的地検索（近い順）</h2>
 
-<input type="text" id="keyword" placeholder="例：沖縄">
+<input type="text" id="keyword" placeholder="例：沖縄美ら海水族館">
 <button onclick="searchHotels()">検索</button>
 
 <hr>
 <div id="results"></div>
 
 <script>
-
-const APPLICATION_ID = "99c6687c-934b-461a-91d2-cccac125bba8";
-const ACCESS_KEY = "pk_X0YMu5r1uH81LhQSx9jkv4w3yEcBaAQ9T1XvueirvEH";
-
-function getDistance(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-
-    const a =
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) *
-        Math.cos(lat2 * Math.PI / 180) *
-        Math.sin(dLon/2) *
-        Math.sin(dLon/2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    return R * c;
-}
 
 async function searchHotels() {
 
@@ -44,59 +25,24 @@ async function searchHotels() {
         return;
     }
 
-    const keywordURL =
-    `https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426?format=json&keyword=${encodeURIComponent(keyword)}&applicationId=${APPLICATION_ID}&accessKey=${ACCESS_KEY}`;
-
-    const keywordRes = await fetch(keywordURL);
-    const keywordData = await keywordRes.json();
-
-    if (!keywordData.hotels) {
-        document.getElementById("results").innerHTML = "ホテルが見つかりません";
-        return;
-    }
-
-    const centerHotel = keywordData.hotels[0].hotel[0].hotelBasicInfo;
-    const centerLat = centerHotel.latitude;
-    const centerLon = centerHotel.longitude;
-
-    const simpleURL =
-    `https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426?format=json&latitude=${centerLat}&longitude=${centerLon}&searchRadius=3&applicationId=${APPLICATION_ID}&accessKey=${ACCESS_KEY}`;
-
-    const simpleRes = await fetch(simpleURL);
-    const simpleData = await simpleRes.json();
-
-    if (!simpleData.hotels) {
-        document.getElementById("results").innerHTML = "周辺ホテルなし";
-        return;
-    }
-
-    const hotels = simpleData.hotels.map(h => {
-        const info = h.hotel[0].hotelBasicInfo;
-
-        const distance = getDistance(
-            centerLat,
-            centerLon,
-            info.latitude,
-            info.longitude
-        );
-
-        return { info, distance };
-    });
-
-    hotels.sort((a, b) => a.distance - b.distance);
+    const res = await fetch(`/search?keyword=${encodeURIComponent(keyword)}`);
+    const data = await res.json();
 
     const resultsDiv = document.getElementById("results");
     resultsDiv.innerHTML = "";
 
-    hotels.forEach(h => {
+    if (!data.hotels || data.hotels.length === 0) {
+        resultsDiv.innerHTML = "ホテルが見つかりません";
+        return;
+    }
+
+    data.hotels.forEach(h => {
         const html = `
         <div style="border:1px solid #ccc;padding:15px;margin:15px 0;">
-            <h3>${h.info.hotelName}</h3>
-            <p>料金： ¥${h.info.hotelMinCharge ?? "情報なし"}</p>
-            <p>距離： ${h.distance.toFixed(2)} km</p>
-            <a href="${h.info.hotelInformationUrl}" target="_blank">
-                楽天で見る
-            </a>
+            <h3>${h.name}</h3>
+            <p>料金： ¥${h.price ?? "情報なし"}</p>
+            <p>距離： ${h.distance} km</p>
+            <a href="${h.url}" target="_blank">楽天で見る</a>
         </div>
         `;
         resultsDiv.innerHTML += html;
