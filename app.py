@@ -1,10 +1,11 @@
 from flask import Flask, render_template, request, jsonify
 import requests
+import os
 
 app = Flask(__name__)
 
 RAKUTEN_APP_ID = "99c6687c-934b-461a-91d2-cccac125bba8"
-RAKUTEN_ACCESS_KEY = "pk_d9C17gWx15sJvd3zfV6c1vXvKjrsSbd8rFSOOf1K0jY"  # ← これが accessKey
+RAKUTEN_ACCESS_KEY = "pk_d9C17gWx15sJvd3zfV6c1vXvKjrsSbd8rFSOOf1K0jY"
 RAKUTEN_AFFILIATE_ID = "516c5cc9.1bfc6c7d.516c5cca.f7d5de3e"
 
 @app.route("/")
@@ -30,7 +31,9 @@ def search():
     }
 
     res = requests.get(url, headers=headers, params=params)
+
     return jsonify(res.json())
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
