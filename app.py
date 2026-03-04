@@ -4,6 +4,7 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# RenderのEnvironment Variablesから取得
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
@@ -25,19 +26,12 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
-            
-            # 【対策】楽天の新APIが「これならOK」と言うまでパターンを網羅します
-            # スラッシュあり・なし両方を意識し、ブラウザのふりを完璧にします
             headers = {
                 "Referer": "https://mysite-l8l0.onrender.com/",
-                "Origin": "https://mysite-l8l0.onrender.com",
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
             }
-
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers)
-                print(f"--- Search: {keyword} / Status: {res.status_code} ---")
-                
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
@@ -45,13 +39,13 @@ def index():
                             info = h['hotel'][0]['hotelBasicInfo']
                             hotels.append(info)
                 else:
-                    # ここでエラー内容がまた出るはずです
-                    print(f"API Error Detail: {res.text}")
+                    print(f"API Error: {res.text}")
             except Exception as e:
-                print(f"System Error: {str(e)}")
-
+                print(f"System Error: {e}")
+    
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
+# この下の2行が「一番左端」から始まっていることが成功の絶対条件です
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
