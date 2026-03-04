@@ -14,7 +14,6 @@ RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelS
 def index():
     hotels = []
     keyword = ""
-    
     if request.method == 'POST':
         keyword = request.form.get('keyword')
         if keyword:
@@ -26,39 +25,28 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
-            
-            # 通信セッションを作成（ブラウザのような継続的な通信を装う）
             session = requests.Session()
-            
-            # 楽天が「本物のブラウザだ」と誤認するレベルまでヘッダーを強化
             headers = {
                 "Referer": "https://mysite-l8l0.onrender.com/",
-                "Origin": "https://mysite-l8l0.onrender.com",
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36",
-                "Accept": "application/json",
-                "Accept-Language": "ja,en-US;q=0.9,en;q=0.8",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
             }
-
             try:
-                # sessionを使ってリクエストを送る
                 res = session.get(RAKUTEN_API_URL, params=params, headers=headers)
-                
-                print(f"--- DEBUG LOG ---")
-                print(f"Keyword: {keyword}")
-                print(f"Status: {res.status_code}")
-
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
                         for h in data['hotels']:
+                            # ここで hotelBasicInfo を取得
                             info = h['hotel'][0]['hotelBasicInfo']
+                            
+                            # 【重要】もしアフィリエイトIDが設定されていれば、affiliateUrl が優先される
+                            # なければ hotelInformationUrl を使う
+                            final_url = info.get('affiliateUrl') or info.get('hotelInformationUrl')
+                            info['target_url'] = final_url # テンプレートで使うための名前を固定
+                            
                             hotels.append(info)
-                else:
-                    print(f"Detail: {res.text}")
-
             except Exception as e:
-                print(f"Error: {str(e)}")
-    
+                print(f"Error: {e}")
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":

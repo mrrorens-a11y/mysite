@@ -22,7 +22,7 @@
         .hotel-name { font-size: 16px; font-weight: bold; color: #007185; margin-bottom: 8px; 
                       display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .price { font-size: 20px; font-weight: bold; color: #B12704; margin: 10px 0; }
-        /* 予約ボタンをAmazon風に目立たせる */
+        
         .reserve-link { 
             display: block; 
             background-color: #ffd814; 
@@ -63,7 +63,8 @@
                     価格未定
                 {% endif %}
             </div>
-            <a href="{{ hotel.affiliateUrl }}" target="_blank" class="reserve-link">楽天トラベルで空室確認</a>
+            {# リンク先を hotel.target_url に修正 #}
+            <a href="{{ hotel.target_url }}" target="_blank" rel="noopener noreferrer" class="reserve-link">楽天トラベルで空室確認</a>
         </div>
     </div>
     {% endfor %}
