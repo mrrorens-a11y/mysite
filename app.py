@@ -25,34 +25,32 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
-            # セッションとヘッダーの固定（403対策）
-            session = requests.Session()
+            
+            # 【重要】楽天が拒否できない「完璧なブラウザ」のふりをします
             headers = {
-                "Referer": "https://mysite-l8l0.onrender.com/",
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "accept": "application/json"
             }
+
             try:
-                res = session.get(RAKUTEN_API_URL, params=params, headers=headers)
+                # タイムアウトも設定して安定性を高めます
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                
+                print(f"DEBUG: Status={res.status_code}")
+
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            
-                            # 【重要】リンク先をセットするロジック
-                            # 1. アフィリエイトURLがあればそれを使う
-                            # 2. なければ通常のURLを使う
-                            # 3. どちらもなければ楽天トラベルTOP（保険）
-                            raw_url = info.get('hotelInformationUrl', 'https://travel.rakuten.co.jp/')
-                            aff_url = info.get('affiliateUrl')
-                            
-                            info['target_url'] = aff_url if aff_url else raw_url
-                            
+                            # リンク先を確定させる（target_url）
+                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
-                    else:
-                        print("DEBUG: 宿が見つかりませんでした。")
+                        print(f"DEBUG: Found {len(hotels)} hotels")
                 else:
-                    print(f"DEBUG: API Error: {res.status_code} - {res.text}")
+                    print(f"DEBUG: API Error Detail: {res.text}")
             except Exception as e:
                 print(f"DEBUG: System Error: {e}")
 
