@@ -25,6 +25,7 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
+            # セッションとヘッダーの固定（403対策）
             session = requests.Session()
             headers = {
                 "Referer": "https://mysite-l8l0.onrender.com/",
@@ -36,17 +37,25 @@ def index():
                     data = res.json()
                     if 'hotels' in data:
                         for h in data['hotels']:
-                            # ここで hotelBasicInfo を取得
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 【重要】もしアフィリエイトIDが設定されていれば、affiliateUrl が優先される
-                            # なければ hotelInformationUrl を使う
-                            final_url = info.get('affiliateUrl') or info.get('hotelInformationUrl')
-                            info['target_url'] = final_url # テンプレートで使うための名前を固定
+                            # 【重要】リンク先をセットするロジック
+                            # 1. アフィリエイトURLがあればそれを使う
+                            # 2. なければ通常のURLを使う
+                            # 3. どちらもなければ楽天トラベルTOP（保険）
+                            raw_url = info.get('hotelInformationUrl', 'https://travel.rakuten.co.jp/')
+                            aff_url = info.get('affiliateUrl')
+                            
+                            info['target_url'] = aff_url if aff_url else raw_url
                             
                             hotels.append(info)
+                    else:
+                        print("DEBUG: 宿が見つかりませんでした。")
+                else:
+                    print(f"DEBUG: API Error: {res.status_code} - {res.text}")
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"DEBUG: System Error: {e}")
+
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
