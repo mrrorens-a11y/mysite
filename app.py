@@ -5,81 +5,94 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数から取得
+# APIキー設定（Render環境変数から）
+RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+# 目的地DB
+DESTINATIONS_DB = {
+    "沖縄美ら海水族館": {"lat": 26.6943, "lon": 127.8770},
+    "美ら海水族館": {"lat": 26.6943, "lon": 127.8770},
+    "首里城公園": {"lat": 26.2172, "lon": 127.7195},
+    "那覇空港": {"lat": 26.2014, "lon": 127.6468}
+}
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    if not lat1 or not lon1 or not lat2 or not lon2:
-        return None
-    R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+# --- 🔥 正確なHaversine距離計算 ---
+def calc_distance(lat1, lon1, lat2, lon2):
+    R = 6371.0 # 地球の半径 (km)
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = math.sin(dphi/2)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda/2)**2
+    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
     keyword = ""
     if request.method == 'POST':
-        keyword = request.form.get('keyword')
-        if keyword:
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
-                "affiliateId": RAKUTEN_AFFILIATE_ID,
-                "format": "json",
-                "keyword": keyword,
-                "hits": 20
+        keyword = request.form.get('keyword', '').strip()
+        target = DESTINATIONS_DB.get(keyword)
+        
+        if target:
+            # 1. じゃらんAPIで「座標から半径3km」を検索（じゃらんは「度」でOK！）
+            jalan_url = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
+            j_params = {
+                "key": RECRUIT_API_KEY,
+                "lat": target["lat"],
+                "lng": target["lon"],
+                "range": 3,      # 半径3km
+                "order": 1,      # 距離が近い順
+                "count": 15,     # 15件程度が安定
+                "format": "json"
             }
             
-            headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "accept": "application/json"
-            }
-
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                res = requests.get(jalan_url, params=j_params, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
-                    if 'hotels' in data:
-                        # 成功時のロジック：1番目の宿を基準にする形に戻します
-                        first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
-                        base_lat = float(first_hotel['latitude']) / 3600000
-                        base_lon = float(first_hotel['longitude']) / 3600000
+                    results = data.get('results', {}).get('hotel', [])
+                    
+                    for h in results:
+                        # じゃらんの基本情報
+                        h_lat = float(h['lat'])
+                        h_lon = float(h['lng'])
+                        dist = calc_distance(target["lat"], target["lon"], h_lat, h_lon)
                         
-                        for h in data['hotels']:
-                            info = h['hotel'][0]['hotelBasicInfo']
-                            lat = float(info['latitude']) / 3600000
-                            lon = float(info['longitude']) / 3600000
+                        # 2. 楽天APIに「その宿名」で価格を聞きに行く（簡易検索）
+                        rakuten_price = "確認中"
+                        rakuten_url = ""
+                        r_params = {
+                            "applicationId": RAKUTEN_APP_ID,
+                            "affiliateId": RAKUTEN_AFFILIATE_ID,
+                            "keyword": h['hotel_name'],
+                            "hits": 1,
+                            "format": "json"
+                        }
+                        r_res = requests.get("https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", params=r_params)
+                        if r_res.status_code == 200:
+                            r_data = r_res.json()
+                            if 'hotels' in r_data:
+                                r_info = r_data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                                rakuten_price = f"¥{r_info.get('hotelMinCharge', '---')}"
+                                rakuten_url = r_info.get('affiliateUrl') or r_info.get('hotelInformationUrl')
 
-                            dist = calculate_distance(base_lat, base_lon, lat, lon)
-                            
-                            if dist is not None:
-                                if dist < 0.1:
-                                    info['display_distance'] = "すぐ近く"
-                                elif dist < 1.0:
-                                    meters = int(dist * 1000)
-                                    info['display_distance'] = f"{meters}m"
-                                else:
-                                    info['display_distance'] = f"{round(dist, 1)}km"
-                            else:
-                                info['display_distance'] = ""
-
-                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
-                            hotels.append(info)
+                        # データをまとめる
+                        hotels.append({
+                            "name": h['hotel_name'],
+                            "image": h['hotel_image_sample_large'],
+                            "dist_val": dist,
+                            "display_distance": f"{int(dist*1000)}m" if dist < 1 else f"{round(dist,1)}km",
+                            "jalan_price": f"¥{h.get('sample_rate_from', '---')}",
+                            "rakuten_price": rakuten_price,
+                            "jalan_url": h['plan_list_url'], # 後でアフィリンクに置換可能
+                            "rakuten_url": rakuten_url
+                        })
             except Exception as e:
                 print(f"DEBUG: Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
