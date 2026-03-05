@@ -5,6 +5,7 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# Renderの環境変数から取得（これなら安全・確実）
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
@@ -17,11 +18,9 @@ def calculate_distance(lat1, lon1, lat2, lon2):
 
 def get_coordinates(keyword):
     try:
-        # 国土地理院APIで検索ワードの座標を取得
         url = f"https://msearch.gsi.go.jp/address-search/AddressSearch?q={keyword}"
         res = requests.get(url, timeout=5)
         if res.status_code == 200 and res.json():
-            # 経度、緯度の順で返ってくるので入れ替え
             lon, lat = res.json()[0]['geometry']['coordinates']
             return lat, lon
     except: return None, None
@@ -34,7 +33,7 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword')
         if keyword:
-            # 1. 検索ワードから基準となる座標を特定
+            # 検索地点を特定
             base_lat, base_lon = get_coordinates(keyword)
             
             params = {
@@ -44,7 +43,7 @@ def index():
                 "keyword": keyword,
                 "hits": 30
             }
-            # 403回避のためのヘッダー設定
+            # 403回避のためのヘッダー
             headers = {"referer": "https://mysite-l8l0.onrender.com/"}
 
             try:
@@ -55,7 +54,7 @@ def index():
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 緯度経度の「ミリ秒/度」を判別して正しく補正
+                            # 緯度経度のミリ秒/度 補正
                             raw_lat, raw_lon = float(info['latitude']), float(info['longitude'])
                             lat = raw_lat / 3600000 if raw_lat > 1000 else raw_lat
                             lon = raw_lon / 3600000 if raw_lon > 1000 else raw_lon
@@ -63,7 +62,6 @@ def index():
                             # 距離計算
                             if base_lat:
                                 info['dist_val'] = calculate_distance(base_lat, base_lon, lat, lon)
-                                # 単位の出し分け
                                 if info['dist_val'] < 0.05: info['display_distance'] = "すぐ近く"
                                 elif info['dist_val'] < 1.0: info['display_distance'] = f"{int(info['dist_val'] * 1000)}m"
                                 else: info['display_distance'] = f"{round(info['dist_val'], 1)}km"
@@ -74,7 +72,7 @@ def index():
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
                         
-                        # 2. 距離が近い順（dist_valが小さい順）に並び替え
+                        # 距離が近い順に並び替え
                         hotels.sort(key=lambda x: x.get('dist_val', 9999))
             except Exception as e:
                 print(f"Error: {e}")
