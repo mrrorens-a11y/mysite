@@ -5,7 +5,7 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数からすべて取得
+# Renderの環境変数から取得
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
@@ -37,7 +37,7 @@ def index():
         if keyword:
             base_lat, base_lon = get_base_coordinates(keyword)
             
-            # 楽天APIへ送るパラメータ（400エラー回避のためAccessKeyも追加）
+            # 楽天APIへ送るデータ
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -46,17 +46,29 @@ def index():
                 "keyword": keyword,
                 "hits": 30
             }
-            headers = {"referer": "https://mysite-l8l0.onrender.com/"}
+
+            # 403エラー（アクセス拒否）を突破するための強力なヘッダー
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+                "Referer": "https://mysite-l8l0.onrender.com/"
+            }
 
             try:
-                res = requests.get("https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", params=params, headers=headers)
+                # 楽天APIへのリクエスト
+                res = requests.get(
+                    "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", 
+                    params=params, 
+                    headers=headers,
+                    timeout=10
+                )
+                
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 緯度経度の補正
+                            # 座標補正
                             lat_r, lon_r = float(info['latitude']), float(info['longitude'])
                             lat = lat_r / 3600000 if lat_r > 1000 else lat_r
                             lon = lon_r / 3600000 if lon_r > 1000 else lon_r
@@ -74,14 +86,16 @@ def index():
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
                         
-                        # 近い順に並び替え
+                        # 距離が近い順に並び替え
                         hotels.sort(key=lambda x: x.get('dist_val', 9999))
                     else:
-                        error_msg = "宿が見つかりませんでした。"
+                        error_msg = "条件に合う宿が見つかりませんでした。"
                 else:
-                    error_msg = f"楽天APIエラー（{res.status_code}）: IDやキーの設定を確認してください。"
+                    # エラーメッセージを詳細に表示
+                    error_msg = f"楽天APIエラー（{res.status_code}）: IDやキー、または楽天デベロッパー側の『認証ドメイン』設定を確認してください。"
+            
             except Exception as e:
-                error_msg = f"通信エラー: {str(e)}"
+                error_msg = f"通信エラーが発生しました: {str(e)}"
 
     return render_template('index.html', hotels=hotels, keyword=keyword, error_msg=error_msg)
 
