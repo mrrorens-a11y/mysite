@@ -5,18 +5,19 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# 環境変数から各IDを取得
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
+# 楽天APIのURL（キーワード検索）
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# 緯度経度から距離（km）を計算する関数（ヒュベニの公式風）
+# 緯度経度から2点間の距離(km)を計算する関数
 def calculate_distance(lat1, lon1, lat2, lon2):
     if not lat1 or not lon1 or not lat2 or not lon2:
         return None
-    # 地球の半径 (km)
-    R = 6371.0
+    R = 6371.0  # 地球の半径
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
@@ -39,6 +40,7 @@ def index():
                 "hits": 20
             }
             
+            # 【重要】403エラーを防ぐためのヘッダー（成功している設定を維持）
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
@@ -51,30 +53,37 @@ def index():
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # 最初の宿の場所を「検索地点の基準」にする（簡易的な距離表示用）
                         base_lat = None
                         base_lon = None
                         
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 1軒目の宿の座標を基準点とする（「このエリアの中心」からの距離とするため）
-                            if base_lat is None:
-                                base_lat = float(info['latitude'])
-                                base_lon = float(info['longitude'])
-
-                            # 距離計算
-                            dist = calculate_distance(base_lat, base_lon, float(info['latitude']), float(info['longitude']))
+                            # 【修正ポイント】楽天APIのミリ秒単位の緯度経度を「度」に変換
+                            # 3,600,000で割ることで、Googleマップ等と同じ形式になり、距離が正確になります
+                            lat = float(info['latitude']) / 3600000
+                            lon = float(info['longitude']) / 3600000
                             
-                            # 距離の表示形式を整える
+                            # 一旦、1軒目の宿を基準点とする（後で「目的地特定機能」へ拡張予定）
+                            if base_lat is None:
+                                base_lat = lat
+                                base_lon = lon
+
+                            # 正しい数値で距離を計算
+                            dist = calculate_distance(base_lat, base_lon, lat, lon)
+                            
+                            # 距離の表示テキストを作成
                             if dist is not None:
-                                if dist < 1.0:
-                                    info['display_distance'] = f"{int(dist * 1000)}m" # 1km未満はm表示
+                                if dist < 0.03:  # 30m以内
+                                    info['display_distance'] = "すぐ近く"
+                                elif dist < 1.0:
+                                    info['display_distance'] = f"{int(dist * 1000)}m"
                                 else:
-                                    info['display_distance'] = f"{round(dist, 1)}km" # 1km以上はkm表示
+                                    info['display_distance'] = f"{round(dist, 1)}km"
                             else:
                                 info['display_distance'] = ""
 
+                            # アフィリエイトURLの設定
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
             except Exception as e:
