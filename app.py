@@ -11,10 +11,10 @@ RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# --- 目的地DB（ここを増やしていけばOK） ---
+# --- 目的地DB ---
 DESTINATIONS_DB = {
     "沖縄美ら海水族館": {"lat": 26.69509427071826, "lon": 127.87787580710211},
-    "美ら海水族館": {"lat": 26.69509427071826, "lon": 127.87787580710211}, # 揺らぎ対応
+    "美ら海水族館": {"lat": 26.69509427071826, "lon": 127.87787580710211},
     "首里城公園": {"lat": 26.21729513013233, "lon": 127.71954766916963},
     "首里城": {"lat": 26.21729513013233, "lon": 127.71954766916963},
     "那覇空港": {"lat": 26.201402381007522, "lon": 127.64684571716576}
@@ -43,7 +43,7 @@ def index():
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
-                "hits": 30 # 少し多めに取ってソートの質を上げます
+                "hits": 30
             }
             
             headers = {
@@ -58,34 +58,33 @@ def index():
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # --- 基準点の決定ロジック ---
-                        # DBにある名前ならその座標を使う
+                        # 基準点の決定
                         if keyword in DESTINATIONS_DB:
                             base_lat = DESTINATIONS_DB[keyword]["lat"]
                             base_lon = DESTINATIONS_DB[keyword]["lon"]
                         else:
-                            # DBにない場合は、従来通り1番目の宿を基準にする（壊さないための保険）
                             first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
                             base_lat = float(first_hotel['latitude']) / 3600000
                             base_lon = float(first_hotel['longitude']) / 3600000
                         
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            # 楽天座標の補正
+                            
+                            # 【ここを修正しました：lon_r ではなく lon_raw に統一】
                             lat_raw = float(info['latitude'])
                             lon_raw = float(info['longitude'])
+                            
                             lat = lat_raw / 3600000 if lat_raw > 1000 else lat_raw
-                            lon = lon_raw / 3600000 if lon_r > 1000 else lon_raw
+                            lon = lon_raw / 3600000 if lon_raw > 1000 else lon_raw
 
                             dist = calculate_distance(base_lat, base_lon, lat, lon)
                             
                             if dist is not None:
-                                info['dist_val'] = dist # ソート用数値
+                                info['dist_val'] = dist
                                 if dist < 0.05:
                                     info['display_distance'] = "すぐ近く"
                                 elif dist < 1.0:
-                                    meters = int(dist * 1000)
-                                    info['display_distance'] = f"{meters}m"
+                                    info['display_distance'] = f"{int(dist * 1000)}m"
                                 else:
                                     info['display_distance'] = f"{round(dist, 1)}km"
                             else:
@@ -95,7 +94,7 @@ def index():
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
                         
-                        # --- 近い順に並び替え ---
+                        # 近い順に並び替え
                         hotels.sort(key=lambda x: x.get('dist_val', 9999))
 
             except Exception as e:
