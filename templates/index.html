@@ -125,6 +125,7 @@
 
 <header>
     <h1>TOMARUN (とまるん)</h1>
+{% if error_msg %}<p style="color: red;">{{ error_msg }}</p>{% endif %}
 </header>
 
 <form class="search-box" method="POST">
