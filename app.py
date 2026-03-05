@@ -11,13 +11,13 @@ RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# --- 目的地DB ---
+# --- 目的地DB（度単位） ---
 DESTINATIONS_DB = {
-    "沖縄美ら海水族館": {"lat": 26.69509427071826, "lon": 127.87787580710211},
-    "美ら海水族館": {"lat": 26.69509427071826, "lon": 127.87787580710211},
-    "首里城公園": {"lat": 26.21729513013233, "lon": 127.71954766916963},
-    "首里城": {"lat": 26.21729513013233, "lon": 127.71954766916963},
-    "那覇空港": {"lat": 26.201402381007522, "lon": 127.64684571716576}
+    "沖縄美ら海水族館": {"lat": 26.695094, "lon": 127.877875},
+    "美ら海水族館": {"lat": 26.695094, "lon": 127.877875},
+    "首里城公園": {"lat": 26.217295, "lon": 127.719547},
+    "首里城": {"lat": 26.217295, "lon": 127.719547},
+    "那覇空港": {"lat": 26.201402, "lon": 127.646845}
 }
 
 def calculate_distance(lat1, lon1, lat2, lon2):
@@ -45,43 +45,42 @@ def index():
                 "keyword": keyword,
                 "hits": 30
             }
-            
-            headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-                "accept": "application/json"
-            }
+            headers = {"referer": "https://mysite-l8l0.onrender.com/"}
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # 基準点の決定
+                        # 基準点の決定（DB優先）
                         if keyword in DESTINATIONS_DB:
                             base_lat = DESTINATIONS_DB[keyword]["lat"]
                             base_lon = DESTINATIONS_DB[keyword]["lon"]
                         else:
-                            first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
-                            base_lat = float(first_hotel['latitude']) / 3600000
-                            base_lon = float(first_hotel['longitude']) / 3600000
+                            f_info = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                            # 1軒目基準の場合も補正して取得
+                            f_lat_raw = float(f_info['latitude'])
+                            base_lat = f_lat_raw / 3600000 if f_lat_raw > 1000 else f_lat_raw
+                            f_lon_raw = float(f_info['longitude'])
+                            base_lon = f_lon_raw / 3600000 if f_lon_raw > 1000 else f_lon_raw
                         
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 【ここを修正しました：lon_r ではなく lon_raw に統一】
+                            # 【重要】楽天の日本測地系(ミリ秒)を世界測地系(度)に変換
+                            # 11桁以上の大きい数字で来ることが多いため、一律で3600000で割ります
                             lat_raw = float(info['latitude'])
                             lon_raw = float(info['longitude'])
                             
-                            lat = lat_raw / 3600000 if lat_raw > 1000 else lat_raw
-                            lon = lon_raw / 3600000 if lon_raw > 1000 else lon_raw
+                            # 楽天API(KeywordSearch)は通常ミリ秒単位で返るため、一律補正
+                            lat = lat_raw / 3600000
+                            lon = lon_raw / 3600000
 
                             dist = calculate_distance(base_lat, base_lon, lat, lon)
                             
                             if dist is not None:
                                 info['dist_val'] = dist
-                                if dist < 0.05:
+                                if dist < 0.1:
                                     info['display_distance'] = "すぐ近く"
                                 elif dist < 1.0:
                                     info['display_distance'] = f"{int(dist * 1000)}m"
@@ -89,12 +88,11 @@ def index():
                                     info['display_distance'] = f"{round(dist, 1)}km"
                             else:
                                 info['dist_val'] = 9999
-                                info['display_distance'] = ""
 
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
                         
-                        # 近い順に並び替え
+                        # 距離が近い順に並び替え（これで今帰仁は後ろにいきます！）
                         hotels.sort(key=lambda x: x.get('dist_val', 9999))
 
             except Exception as e:
