@@ -9,8 +9,7 @@ RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-
+# 緯度経度から距離(km)を計算
 def calculate_distance(lat1, lon1, lat2, lon2):
     if not lat1 or not lon1 or not lat2 or not lon2:
         return None
@@ -21,6 +20,22 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
+# 【魔法の機能】地名から緯度経度を特定する（ジオコーディング）
+def get_coordinates(keyword):
+    try:
+        # 国土地理院のAPIを利用（無料・登録不要）
+        url = f"https://msearch.gsi.go.jp/address-search/AddressSearch?q={keyword}"
+        res = requests.get(url, timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            if data:
+                # 検索結果の1番目の場所の座標を返す
+                lon, lat = data[0]['geometry']['coordinates']
+                return lat, lon
+    except:
+        return None, None
+    return None, None
+
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
@@ -28,6 +43,10 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword')
         if keyword:
+            # 1. 検索ワードの場所（0m地点）を特定する
+            base_lat, base_lon = get_coordinates(keyword)
+
+            # 2. 楽天APIで宿を探す
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -45,16 +64,15 @@ def index():
             }
 
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                res = requests.get("https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # 基準点の特定ロジック
-                        # 1番目の宿の座標を「目的地の代表点」として採用（後ほどAPI連携でさらに強化可能）
-                        # まず、リスト全体を見て一番「中心」に近いものを推測します
-                        first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
-                        base_lat = float(first_hotel['latitude']) / 3600000
-                        base_lon = float(first_hotel['longitude']) / 3600000
+                        # もし地名特定が失敗していたら、1軒目を基準にする（バックアップ用）
+                        if base_lat is None:
+                            first_h = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                            base_lat = float(first_h['latitude']) / 3600000
+                            base_lon = float(first_h['longitude']) / 3600000
                         
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
@@ -64,23 +82,19 @@ def index():
                             dist = calculate_distance(base_lat, base_lon, lat, lon)
                             
                             if dist is not None:
-                                # 単位と表示の修正
-                                if dist < 0.1: # 100m以内
+                                # 単位判定（mかkmか）
+                                if dist < 0.05: # 50m以内
                                     info['display_distance'] = "すぐ近く"
-                                elif dist < 1.0: # 1km未満はメートル表示
-                                    # 0.5km → 500m
+                                elif dist < 1.0:
                                     meters = int(dist * 1000)
                                     info['display_distance'] = f"{meters}m"
-                                else: # 1km以上はキロ表示
-                                    # 1.234km → 1.2km
+                                else:
                                     info['display_distance'] = f"{round(dist, 1)}km"
-                            else:
-                                info['display_distance'] = ""
-
+                            
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
             except Exception as e:
-                print(f"DEBUG: Error: {e}")
+                print(f"DEBUG Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
