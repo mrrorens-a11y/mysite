@@ -52,13 +52,12 @@ def index():
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # 基準点の決定（DB優先）
+                        # 基準点の決定
                         if keyword in DESTINATIONS_DB:
                             base_lat = DESTINATIONS_DB[keyword]["lat"]
                             base_lon = DESTINATIONS_DB[keyword]["lon"]
                         else:
                             f_info = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
-                            # 1軒目基準の場合も補正して取得
                             f_lat_raw = float(f_info['latitude'])
                             base_lat = f_lat_raw / 3600000 if f_lat_raw > 1000 else f_lat_raw
                             f_lon_raw = float(f_info['longitude'])
@@ -67,14 +66,13 @@ def index():
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 【重要】楽天の日本測地系(ミリ秒)を世界測地系(度)に変換
-                            # 11桁以上の大きい数字で来ることが多いため、一律で3600000で割ります
+                            # 座標の自動判別補正
                             lat_raw = float(info['latitude'])
                             lon_raw = float(info['longitude'])
                             
-                            # 楽天API(KeywordSearch)は通常ミリ秒単位で返るため、一律補正
-                            lat = lat_raw / 3600000
-                            lon = lon_raw / 3600000
+                            # 1000以上ならミリ秒（日本測地系）、1000以下なら度（世界測地系）として扱う
+                            lat = lat_raw / 3600000 if lat_raw > 1000 else lat_raw
+                            lon = lon_raw / 3600000 if lon_raw > 1000 else lon_raw
 
                             dist = calculate_distance(base_lat, base_lon, lat, lon)
                             
@@ -86,15 +84,10 @@ def index():
                                     info['display_distance'] = f"{int(dist * 1000)}m"
                                 else:
                                     info['display_distance'] = f"{round(dist, 1)}km"
-                            else:
-                                info['dist_val'] = 9999
-
-                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
-                            hotels.append(info)
+                                hotels.append(info)
                         
-                        # 距離が近い順に並び替え（これで今帰仁は後ろにいきます！）
+                        # 近い順に並び替え
                         hotels.sort(key=lambda x: x.get('dist_val', 9999))
-
             except Exception as e:
                 print(f"DEBUG: Error: {e}")
 
