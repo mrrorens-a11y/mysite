@@ -5,13 +5,14 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# Render環境変数
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# --- 目的地DB（度単位） ---
+# 目的地DB
 DESTINATIONS_DB = {
     "沖縄美ら海水族館": {"lat": 26.695094, "lon": 127.877875},
     "美ら海水族館": {"lat": 26.695094, "lon": 127.877875},
@@ -21,21 +22,18 @@ DESTINATIONS_DB = {
 }
 
 def calculate_distance(lat1, lon1, lat2, lon2):
-    if not lat1 or not lon1 or not lat2 or not lon2:
-        return None
+    if not lat1 or not lon1 or not lat2 or not lon2: return None
     R = 6371.0
-    dlat = math.radians(lat2 - lat1)
-    dlon = math.radians(lon2 - lon1)
-    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    return R * c
+    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
+    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
+    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
     keyword = ""
     if request.method == 'POST':
-        keyword = request.form.get('keyword')
+        keyword = request.form.get('keyword', '')
         if keyword:
             params = {
                 "applicationId": RAKUTEN_APP_ID,
@@ -48,51 +46,44 @@ def index():
             headers = {"referer": "https://mysite-l8l0.onrender.com/"}
 
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers)
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
-                        # 基準点の決定
-                        if keyword in DESTINATIONS_DB:
-                            base_lat = DESTINATIONS_DB[keyword]["lat"]
-                            base_lon = DESTINATIONS_DB[keyword]["lon"]
-                        else:
-                            f_info = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
-                            f_lat_raw = float(f_info['latitude'])
-                            base_lat = f_lat_raw / 3600000 if f_lat_raw > 1000 else f_lat_raw
-                            f_lon_raw = float(f_info['longitude'])
-                            base_lon = f_lon_raw / 3600000 if f_lon_raw > 1000 else f_lon_raw
-                        
+                        # 基準点の決定（DBにあれば採用、なければ空にする）
+                        target = DESTINATIONS_DB.get(keyword)
+                        b_lat = target["lat"] if target else None
+                        b_lon = target["lon"] if target else None
+
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
                             
-                            # 座標の自動判別補正
-                            lat_raw = float(info['latitude'])
-                            lon_raw = float(info['longitude'])
-                            
-                            # 1000以上ならミリ秒（日本測地系）、1000以下なら度（世界測地系）として扱う
-                            lat = lat_raw / 3600000 if lat_raw > 1000 else lat_raw
-                            lon = lon_raw / 3600000 if lon_raw > 1000 else lon_raw
+                            # 宿の座標（ミリ秒を度に変換）
+                            h_lat = float(info['latitude']) / 3600000
+                            h_lon = float(info['longitude']) / 3600000
 
-                            dist = calculate_distance(base_lat, base_lon, lat, lon)
-                            
-                            if dist is not None:
+                            # 距離計算（DBに地点がある場合のみ実行）
+                            if b_lat and b_lon:
+                                dist = calculate_distance(b_lat, b_lon, h_lat, h_lon)
                                 info['dist_val'] = dist
-                                if dist < 0.1:
-                                    info['display_distance'] = "すぐ近く"
-                                elif dist < 1.0:
-                                    info['display_distance'] = f"{int(dist * 1000)}m"
-                                else:
-                                    info['display_distance'] = f"{round(dist, 1)}km"
-                                hotels.append(info)
+                                if dist < 0.1: info['display_distance'] = "すぐ近く"
+                                elif dist < 1.0: info['display_distance'] = f"{int(dist * 1000)}m"
+                                else: info['display_distance'] = f"{round(dist, 1)}km"
+                            else:
+                                info['dist_val'] = 9999
+                                info['display_distance'] = ""
+
+                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
+                            # ★ここが重要：どんな場合も必ずリストに追加する
+                            hotels.append(info)
                         
-                        # 近い順に並び替え
-                        hotels.sort(key=lambda x: x.get('dist_val', 9999))
-            except Exception as e:
-                print(f"DEBUG: Error: {e}")
+                        # 距離順に並び替え
+                        if b_lat:
+                            hotels.sort(key=lambda x: x.get('dist_val', 9999))
+            except:
+                pass
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
