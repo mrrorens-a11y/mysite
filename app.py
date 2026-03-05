@@ -25,38 +25,67 @@ def calc_distance(lat1, lon1, lat2, lon2):
     a = math.sin(dp/2)**2 + math.cos(p1)*math.cos(p2)*math.sin(dl/2)**2
     return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
 
-@app.route('/')
-def health_check():
-    # Renderのポートスキャンを即座にパスさせるためのルート
-    return "OK", 200
-
-@app.route('/search', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
+    # GETのときは空、POST（検索）のときだけキーワード取得
     keyword = request.form.get('keyword', '').strip() if request.method == 'POST' else ""
     target = DESTINATIONS_DB.get(keyword)
     
     if target:
         url = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
-        params = {"key": RECRUIT_API_KEY, "lat": target["lat"], "lng": target["lon"], "range": 3, "order": 1, "count": 10, "format": "json"}
+        # じゃらんAPI：距離順(order=1)で10件取得
+        params = {
+            "key": RECRUIT_API_KEY, 
+            "lat": target["lat"], 
+            "lng": target["lon"], 
+            "range": 3, 
+            "order": 1, 
+            "count": 10, 
+            "format": "json"
+        }
         try:
-            res = requests.get(url, params=params, timeout=5)
+            res = requests.get(url, params=params, timeout=10)
             if res.status_code == 200:
                 j_hotels = res.json().get('results', {}).get('hotel', [])
                 for h in j_hotels:
                     h_lat, h_lon = float(h['lat']), float(h['lng'])
                     dist = calc_distance(target["lat"], target["lon"], h_lat, h_lon)
+                    
+                    # 楽天の価格も1件ずつ取得（上位5件に絞るのが安全ですが、まずは10件トライ）
+                    rakuten_price = "確認中"
+                    rakuten_url = ""
+                    r_params = {
+                        "applicationId": RAKUTEN_APP_ID,
+                        "affiliateId": RAKUTEN_AFFILIATE_ID,
+                        "keyword": h['hotel_name'],
+                        "hits": 1,
+                        "format": "json"
+                    }
+                    try:
+                        r_res = requests.get("https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", params=r_params, timeout=3)
+                        if r_res.status_code == 200:
+                            r_data = r_res.json()
+                            if 'hotels' in r_data:
+                                r_info = r_data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                                rakuten_price = f"¥{r_info.get('hotelMinCharge', '---')}"
+                                rakuten_url = r_info.get('affiliateUrl') or r_info.get('hotelInformationUrl')
+                    except: pass
+
                     hotels.append({
                         "name": h['hotel_name'],
                         "image": h['hotel_image_sample_large'],
                         "display_distance": f"{int(dist*1000)}m" if dist < 1 else f"{round(dist,1)}km",
                         "jalan_price": f"¥{h.get('sample_rate_from', '---')}",
-                        "jalan_url": h['plan_list_url']
+                        "rakuten_price": rakuten_price,
+                        "jalan_url": h['plan_list_url'],
+                        "rakuten_url": rakuten_url
                     })
-        except: pass
+        except Exception as e:
+            print(f"ERROR: {e}")
+            
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # 重要：Renderは環境変数のPORTを最優先で見に行きます
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
