@@ -5,26 +5,21 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数から取得（これなら安全・確実）
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
+RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
-def calculate_distance(lat1, lon1, lat2, lon2):
-    if not lat1 or not lon1 or not lat2 or not lon2: return None
-    R = 6371.0
-    dlat, dlon = math.radians(lat2 - lat1), math.radians(lon2 - lon1)
-    a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1))*math.cos(math.radians(lat2))*math.sin(dlon/2)**2
-    return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1 - a)))
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-def get_coordinates(keyword):
-    try:
-        url = f"https://msearch.gsi.go.jp/address-search/AddressSearch?q={keyword}"
-        res = requests.get(url, timeout=5)
-        if res.status_code == 200 and res.json():
-            lon, lat = res.json()[0]['geometry']['coordinates']
-            return lat, lon
-    except: return None, None
-    return None, None
+def calculate_distance(lat1, lon1, lat2, lon2):
+    if not lat1 or not lon1 or not lat2 or not lon2:
+        return None
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -33,49 +28,59 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword')
         if keyword:
-            # 検索地点を特定
-            base_lat, base_lon = get_coordinates(keyword)
-            
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
-                "hits": 30
+                "hits": 20
             }
-            # 403回避のためのヘッダー
-            headers = {"referer": "https://mysite-l8l0.onrender.com/"}
+            
+            headers = {
+                "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "accept": "application/json"
+            }
 
             try:
-                res = requests.get("https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426", params=params, headers=headers)
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if 'hotels' in data:
+                        # 基準点の特定ロジック
+                        # 1番目の宿の座標を「目的地の代表点」として採用（後ほどAPI連携でさらに強化可能）
+                        # まず、リスト全体を見て一番「中心」に近いものを推測します
+                        first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                        base_lat = float(first_hotel['latitude']) / 3600000
+                        base_lon = float(first_hotel['longitude']) / 3600000
+                        
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            
-                            # 緯度経度のミリ秒/度 補正
-                            raw_lat, raw_lon = float(info['latitude']), float(info['longitude'])
-                            lat = raw_lat / 3600000 if raw_lat > 1000 else raw_lat
-                            lon = raw_lon / 3600000 if raw_lon > 1000 else raw_lon
+                            lat = float(info['latitude']) / 3600000
+                            lon = float(info['longitude']) / 3600000
 
-                            # 距離計算
-                            if base_lat:
-                                info['dist_val'] = calculate_distance(base_lat, base_lon, lat, lon)
-                                if info['dist_val'] < 0.05: info['display_distance'] = "すぐ近く"
-                                elif info['dist_val'] < 1.0: info['display_distance'] = f"{int(info['dist_val'] * 1000)}m"
-                                else: info['display_distance'] = f"{round(info['dist_val'], 1)}km"
+                            dist = calculate_distance(base_lat, base_lon, lat, lon)
+                            
+                            if dist is not None:
+                                # 単位と表示の修正
+                                if dist < 0.1: # 100m以内
+                                    info['display_distance'] = "すぐ近く"
+                                elif dist < 1.0: # 1km未満はメートル表示
+                                    # 0.5km → 500m
+                                    meters = int(dist * 1000)
+                                    info['display_distance'] = f"{meters}m"
+                                else: # 1km以上はキロ表示
+                                    # 1.234km → 1.2km
+                                    info['display_distance'] = f"{round(dist, 1)}km"
                             else:
-                                info['dist_val'] = 9999
                                 info['display_distance'] = ""
 
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
-                        
-                        # 距離が近い順に並び替え
-                        hotels.sort(key=lambda x: x.get('dist_val', 9999))
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"DEBUG: Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
