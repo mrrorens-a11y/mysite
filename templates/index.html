@@ -138,6 +138,11 @@
         <img src="{{ hotel.hotelImageUrl }}" alt="宿の画像" class="hotel-image">
         <div class="hotel-info">
             <div class="hotel-name">{{ hotel.hotelName }}</div>
+{% if hotel.display_distance %}
+                <div style="font-size: 14px; color: #0071e3; margin-bottom: 5px; font-weight: 500;">
+                    📍 検索地点から約 {{ hotel.display_distance }}
+                </div>
+            {% endif %}
             <div class="price">
                 {% if hotel.hotelMinCharge %}
                     ￥{{ "{:,}".format(hotel.hotelMinCharge) }}〜
