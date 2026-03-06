@@ -4,56 +4,70 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# Renderの環境変数から取得
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
+RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
     keyword = ""
-    debug_msg = "" # 何が起きたか貯める変数
-    
     if request.method == 'POST':
+        # フォームからキーワードを取得
         keyword = request.form.get('keyword', '').strip()
+        
         if keyword:
-            # --- 1. 楽天チェック ---
+            # --- 1. 楽天API (400エラー対策済み) ---
             r_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
             r_params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
-                "hits": 5
+                "hits": 10
             }
             try:
                 r_res = requests.get(r_url, params=r_params, timeout=10)
-                r_data = r_res.json()
-                if 'hotels' in r_data:
-                    for h in r_data['hotels']:
+                if r_res.status_code == 200:
+                    r_data = r_res.json()
+                    for h in r_data.get('hotels', []):
                         info = h['hotel'][0]['hotelBasicInfo']
-                        hotels.append({"name": info['hotelName'], "site": "Rakuten", "price": info['hotelMinCharge'], "url": info['hotelInformationUrl'], "image": info['hotelImageUrl']})
-                    debug_msg += f"✅楽天: {len(r_data['hotels'])}件発見 "
-                else:
-                    debug_msg += f"❌楽天: 宿が見つかりません(Code:{r_res.status_code}) "
-            except Exception as e:
-                debug_msg += f"⚠️楽天エラー: {str(e)} "
+                        hotels.append({
+                            "name": info['hotelName'],
+                            "image": info['hotelImageUrl'],
+                            "price": f"¥{info.get('hotelMinCharge', '---')}",
+                            "url": info.get('affiliateUrl') or info.get('hotelInformationUrl'),
+                            "site": "Rakuten"
+                        })
+            except: pass
 
-            # --- 2. じゃらんチェック ---
-            j_url = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
-            j_params = {"key": RECRUIT_API_KEY, "keyword": keyword, "count": 5, "format": "json"}
-            try:
-                j_res = requests.get(j_url, params=j_params, timeout=10)
-                j_data = j_res.json()
-                j_list = j_data.get('results', {}).get('hotel', [])
-                if j_list:
-                    for jh in j_list:
-                        hotels.append({"name": jh['hotel_name'], "site": "Jalan", "price": jh['sample_rate_from'], "url": jh['plan_list_url'], "image": jh['hotel_image_sample_large']})
-                    debug_msg += f"✅じゃらん: {len(j_list)}件発見"
-                else:
-                    debug_msg += f"❌じゃらん: 宿が見つかりません(Code:{j_res.status_code})"
-            except Exception as e:
-                debug_msg += f"⚠️じゃらんエラー: {str(e)}"
+            # --- 2. じゃらんAPI (Expecting value対策済み) ---
+            if RECRUIT_API_KEY:
+                j_url = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
+                j_params = {
+                    "key": RECRUIT_API_KEY,
+                    "keyword": keyword,
+                    "count": 10,
+                    "format": "json"
+                }
+                try:
+                    j_res = requests.get(j_url, params=j_params, timeout=10)
+                    # 200 OKのときだけJSONとして読み込む
+                    if j_res.status_code == 200:
+                        j_data = j_res.json()
+                        j_hotels = j_data.get('results', {}).get('hotel', [])
+                        for jh in j_hotels:
+                            hotels.append({
+                                "name": jh.get('hotel_name'),
+                                "image": jh.get('hotel_image_sample_large'),
+                                "price": f"¥{jh.get('sample_rate_from', '---')}",
+                                "url": jh.get('plan_list_url'),
+                                "site": "Jalan"
+                            })
+                except: pass
 
-    return render_template('index.html', hotels=hotels, keyword=keyword, debug_msg=debug_msg)
+    return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
