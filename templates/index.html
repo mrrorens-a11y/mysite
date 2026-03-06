@@ -3,23 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOMARUN | 宿泊予約</title>
+    <title>TOMARUN</title>
     <style>
         :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; padding-bottom: 50px; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; padding-bottom: 50px; color: #1d1d1f; }
         header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 18px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: 700; }
         .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 10px; }
         input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; }
         button { background: var(--apple-blue); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
         .hotel-card { background: white; border-radius: 20px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .hotel-img { width: 260px; height: 195px; object-fit: cover; }
+        .hotel-img { width: 260px; height: 100%; min-height: 200px; object-fit: cover; }
         .hotel-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
         .hotel-name { font-size: 19px; font-weight: 700; margin: 0 0 10px 0; }
-        .address { font-size: 13px; color: #86868b; margin-bottom: 15px; }
-        .price-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #f2f2f2; display: flex; align-items: center; justify-content: space-between; }
-        .price-val { font-size: 22px; font-weight: 700; color: #d6001c; }
-        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+        .address { font-size: 12px; color: #86868b; margin-bottom: 15px; }
+        
+        /* 比較リスト */
+        .price-list { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid #f2f2f2; padding-top: 15px; }
+        .ota-row { display: flex; align-items: center; justify-content: space-between; }
+        .ota-name { font-size: 12px; font-weight: 600; color: #86868b; }
+        .price-val { font-size: 18px; font-weight: 700; color: #d6001c; }
+        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; }
+        
         @media (max-width: 600px) { .hotel-card { flex-direction: column; } .hotel-img { width: 100%; height: 200px; } }
     </style>
 </head>
@@ -32,16 +37,21 @@
 <div class="container">
     {% for h in hotels %}
     <div class="hotel-card">
-        <img src="{{ h.hotelImageUrl }}" class="hotel-img">
+        <img src="{{ h.image }}" class="hotel-img">
         <div class="hotel-info">
-            <h2 class="hotel-name">{{ h.hotelName }}</h2>
-            <p class="address">📍 {{ h.address1 }}{{ h.address2 }}</p>
-            <div class="price-row">
-                <div>
-                    <span style="font-size:11px; color:#86868b;">楽天トラベル 最安値</span><br>
-                    <span class="price-val">¥{{ h.hotelMinCharge }}</span>
+            <h2 class="hotel-name">{{ h.name }}</h2>
+            <p class="address">📍 {{ h.address }}</p>
+            <div class="price-list">
+                <div class="ota-row">
+                    <span class="ota-name">楽天トラベル</span>
+                    <span class="price-val">{{ h.r_price }}</span>
+                    <a href="{{ h.r_url }}" class="btn" target="_blank">予約</a>
                 </div>
-                <a href="{{ h.target_url }}" class="btn" target="_blank">予約する</a>
+                <div class="ota-row">
+                    <span class="ota-name">じゃらんnet</span>
+                    <span class="price-val">{{ h.j_price }}</span>
+                    <a href="{{ h.j_url }}" class="btn" target="_blank" style="background-color: #ff9900;">予約</a>
+                </div>
             </div>
         </div>
     </div>
