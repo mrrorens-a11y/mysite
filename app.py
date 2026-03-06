@@ -4,12 +4,9 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数から取得
+# 環境変数
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
-RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
-
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -18,35 +15,57 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         if keyword:
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
-                "affiliateId": RAKUTEN_AFFILIATE_ID,
-                "format": "json",
-                "keyword": keyword,
-                "hits": 20
-            }
-            
-            # 【重要】あなたが指定した「完璧なブラウザ」のふりをするヘッダー
-            headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "accept": "application/json"
-            }
-
+            # 1. まずは「楽天」でベースの宿リストを作る
+            r_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
-                if res.status_code == 200:
-                    data = res.json()
-                    if 'hotels' in data:
-                        for h in data['hotels']:
-                            info = h['hotel'][0]['hotelBasicInfo']
-                            # リンク先を確定させる
-                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
-                            hotels.append(info)
+                r_res = requests.get(r_url, params={
+                    "applicationId": RAKUTEN_APP_ID,
+                    "format": "json",
+                    "keyword": keyword,
+                    "hits": 10
+                }, timeout=5)
+                
+                if r_res.status_code == 200:
+                    r_data = r_res.json()
+                    for h in r_data.get('hotels', []):
+                        info = h['hotel'][0]['hotelBasicInfo']
+                        h_name = info['hotelName']
+                        
+                        # --- ステップ2: 楽天で見つけた宿名で「じゃらん」にピンポイントで聞く ---
+                        j_price = "設定なし"
+                        j_url = None
+                        
+                        if RECRUIT_API_KEY:
+                            try:
+                                # 宿名で検索（完全一致に近いものを探すため1件だけ取得）
+                                j_res = requests.get("https://webservice.recruit.co.jp/jalan/hotel/v1/", params={
+                                    "key": RECRUIT_API_KEY,
+                                    "keyword": h_name, 
+                                    "count": 1,
+                                    "format": "json"
+                                }, timeout=3)
+                                
+                                if j_res.status_code == 200:
+                                    j_data = j_res.json()
+                                    j_list = j_data.get('results', {}).get('hotel', [])
+                                    if j_list:
+                                        # 宿名の一部が一致しているか簡易チェック
+                                        if j_list[0]['hotel_name'][:5] in h_name:
+                                            j_price = f"¥{j_list[0].get('sample_rate_from', '---')}"
+                                            j_url = j_list[0].get('plan_list_url')
+                            except: pass # じゃらんでエラーが起きても楽天は守る
+
+                        # 楽天とじゃらんのデータを1つのカードにまとめる（ステップ3）
+                        hotels.append({
+                            "name": h_name,
+                            "image": info['hotelImageUrl'],
+                            "r_price": f"¥{info.get('hotelMinCharge', '---')}",
+                            "r_url": info.get('affiliateUrl') or info.get('hotelInformationUrl'),
+                            "j_price": j_price,
+                            "j_url": j_url
+                        })
             except Exception as e:
-                print(f"DEBUG Error: {e}")
+                print(f"Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
