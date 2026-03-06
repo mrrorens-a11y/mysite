@@ -4,54 +4,49 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# ID類
+# Renderの環境変数から取得
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
+RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
+RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
+
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
     keyword = ""
-    
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         if keyword:
-            # --- 🚀 楽天は「独立」して動かす ---
-            try:
-                r_res = requests.get(
-                    "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426",
-                    params={"applicationId": RAKUTEN_APP_ID, "format": "json", "keyword": keyword, "hits": 10},
-                    timeout=5 # 5秒で切り上げる
-                )
-                if r_res.status_code == 200:
-                    r_data = r_res.json()
-                    for h in r_data.get('hotels', []):
-                        info = h['hotel'][0]['hotelBasicInfo']
-                        hotels.append({
-                            "name": info['hotelName'], "price": info.get('hotelMinCharge', '---'),
-                            "url": info['hotelInformationUrl'], "image": info['hotelImageUrl'], "site": "Rakuten"
-                        })
-            except Exception as e:
-                print(f"楽天エラー(無視します): {e}")
+            params = {
+                "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
+                "affiliateId": RAKUTEN_AFFILIATE_ID,
+                "format": "json",
+                "keyword": keyword,
+                "hits": 20
+            }
+            
+            # 【重要】あなたが指定した「完璧なブラウザ」のふりをするヘッダー
+            headers = {
+                "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "accept": "application/json"
+            }
 
-            # --- 🚀 じゃらんも「独立」して動かす ---
-            # ここでエラーが起きても、上の楽天データ（hotels）は守られます
-            if RECRUIT_API_KEY:
-                try:
-                    j_res = requests.get(
-                        "https://webservice.recruit.co.jp/jalan/hotel/v1/",
-                        params={"key": RECRUIT_API_KEY, "keyword": keyword, "count": 10, "format": "json"},
-                        timeout=5
-                    )
-                    if j_res.status_code == 200:
-                        j_data = j_res.json()
-                        for jh in j_data.get('results', {}).get('hotel', []):
-                            hotels.append({
-                                "name": jh['hotel_name'], "price": jh.get('sample_rate_from', '---'),
-                                "url": jh['plan_list_url'], "image": jh['hotel_image_sample_large'], "site": "Jalan"
-                            })
-                except Exception as e:
-                    print(f"じゃらんエラー(無視します): {e}")
+            try:
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                if res.status_code == 200:
+                    data = res.json()
+                    if 'hotels' in data:
+                        for h in data['hotels']:
+                            info = h['hotel'][0]['hotelBasicInfo']
+                            # リンク先を確定させる
+                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
+                            hotels.append(info)
+            except Exception as e:
+                print(f"DEBUG Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
