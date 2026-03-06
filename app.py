@@ -4,28 +4,28 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
-RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
+# Render環境変数
+RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 
-# 新APIドメイン
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+# 楽天API
+RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
 
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route("/", methods=["GET", "POST"])
 def index():
 
     hotels = []
     keyword = ""
 
-    if request.method == 'POST':
+    if request.method == "POST":
 
-        keyword = request.form.get('keyword','').strip()
+        keyword = request.form.get("keyword", "").strip()
 
         if keyword:
 
             params = {
                 "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
@@ -33,8 +33,8 @@ def index():
             }
 
             headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "user-agent": "Mozilla/5.0"
+                "Referer": "https://mysite-l8l0.onrender.com/",
+                "User-Agent": "Mozilla/5.0"
             }
 
             try:
@@ -58,7 +58,10 @@ def index():
 
                             info = h["hotel"][0]["hotelBasicInfo"]
 
-                            info["target_url"] = info.get("affiliateUrl") or info.get("hotelInformationUrl")
+                            info["target_url"] = (
+                                info.get("affiliateUrl")
+                                or info.get("hotelInformationUrl")
+                            )
 
                             hotels.append(info)
 
@@ -70,11 +73,18 @@ def index():
 
                 print("DEBUG SYSTEM ERROR:", e)
 
-    return render_template("index.html", hotels=hotels, keyword=keyword)
+    return render_template(
+        "index.html",
+        hotels=hotels,
+        keyword=keyword
+    )
 
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT",10000))
+    port = int(os.environ.get("PORT", 10000))
 
-    app.run(host="0.0.0.0", port=port)
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
