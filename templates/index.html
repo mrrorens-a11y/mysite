@@ -3,56 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOMARUN | 宿泊予約比較</title>
+    <title>TOMARUN | 宿泊予約</title>
     <style>
         :root {
             --apple-blue: #0071e3;
             --apple-bg: #f5f5f7;
-            --apple-dark: #1d1d1f;
         }
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: var(--apple-bg); color: var(--apple-dark); margin: 0; padding: 0; }
-        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 18px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-size: 20px; font-weight: 700; }
-        .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 12px; }
-        input { flex: 1; padding: 14px 20px; border-radius: 14px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; background: white; }
-        button { background: var(--apple-blue); color: white; border: none; padding: 12px 28px; border-radius: 14px; font-weight: 600; cursor: pointer; }
+        body { font-family: -apple-system, sans-serif; background: var(--apple-bg); margin: 0; padding: 0; color: #1d1d1f; }
+        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 18px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: bold; }
+        .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; }
+        button { background: var(--apple-blue); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-        .hotel-card { background: white; border-radius: 24px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.04); border: 1px solid rgba(0,0,0,0.05); }
-        .hotel-img { width: 280px; height: 210px; object-fit: cover; }
-        .hotel-info { padding: 24px; flex: 1; display: flex; flex-direction: column; }
-        .hotel-name { font-size: 20px; font-weight: 700; margin: 0 0 15px 0; }
-        .price-list { display: flex; flex-direction: column; gap: 12px; }
-        .ota-item { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid #f2f2f2; }
-        .ota-item:first-child { border-top: none; }
-        .ota-name { font-size: 13px; color: #86868b; font-weight: 600; }
-        .price-val { font-size: 18px; font-weight: 700; color: #d6001c; }
-        .btn { display: inline-block; background: var(--apple-blue); color: white; text-decoration: none; font-size: 12px; font-weight: 600; padding: 8px 16px; border-radius: 10px; }
-        @media (max-width: 650px) { .hotel-card { flex-direction: column; } .hotel-img { width: 100%; height: 200px; } }
+        .card { background: white; border-radius: 20px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .hotel-img { width: 240px; height: 180px; object-fit: cover; }
+        .info { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .name { font-size: 19px; font-weight: 700; margin: 0; }
+        .address { font-size: 13px; color: #86868b; margin: 5px 0; }
+        .price-box { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f2f2f2; padding-top: 15px; }
+        .price { font-size: 20px; font-weight: 700; color: #d6001c; }
+        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 8px 18px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+        @media (max-width: 600px) { .card { flex-direction: column; } .hotel-img { width: 100%; height: 200px; } }
     </style>
 </head>
 <body>
 <header>TOMARUN</header>
 <form class="search-area" method="POST">
-    <input type="text" name="keyword" placeholder="目的地を入力（例：沖縄）" value="{{ keyword }}">
+    <input type="text" name="keyword" placeholder="どこに泊まりますか？" value="{{ keyword }}">
     <button type="submit">検索</button>
 </form>
 <div class="container">
-    {% if debug_msg %}<p style="text-align:center; color:#d6001c;">{{ debug_msg }}</p>{% endif %}
+    {% if debug_msg %}<p style="text-align:center; color:red;">{{ debug_msg }}</p>{% endif %}
     {% for h in hotels %}
-    <div class="hotel-card">
+    <div class="card">
         <img src="{{ h.image }}" class="hotel-img">
-        <div class="hotel-info">
-            <h2 class="hotel-name">{{ h.name }}</h2>
-            <div class="price-list">
-                <div class="ota-item">
-                    <span class="ota-name">楽天トラベル</span>
-                    <span class="price-val">{{ h.r_price }}</span>
-                    <a href="{{ h.r_url }}" class="btn" target="_blank">予約する</a>
-                </div>
-                <div class="ota-item">
-                    <span class="ota-name">じゃらんnet</span>
-                    <span class="price-val">{{ h.j_price }}</span>
-                    <a href="{{ h.j_url }}" class="btn" target="_blank">予約する</a>
-                </div>
+        <div class="info">
+            <div>
+                <h2 class="name">{{ h.name }}</h2>
+                <p class="address">📍 {{ h.address }}</p>
+            </div>
+            <div class="price-box">
+                <span class="price">{{ h.price }}</span>
+                <a href="{{ h.url }}" class="btn" target="_blank">楽天トラベルで予約</a>
             </div>
         </div>
     </div>
