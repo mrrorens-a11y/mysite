@@ -1,66 +1,179 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOMARUN | 比較検索</title>
-    <style>
-        :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; }
-        body { font-family: -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; padding-bottom: 50px; }
-        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 20px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: 700; }
-        .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 10px; }
-        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; }
-        button { background: var(--apple-blue); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
-        .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-        .card { background: white; border-radius: 20px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .hotel-img { width: 260px; height: 100%; object-fit: cover; }
-        .info { padding: 20px; flex: 1; }
-        .hotel-name { font-size: 18px; font-weight: 700; margin: 0 0 15px 0; }
-        
-        /* 比較テーブル風デザイン */
-        .price-table { width: 100%; border-top: 1px solid #f2f2f2; }
-        .ota-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f2f2; }
-        .ota-label { font-size: 13px; color: #86868b; font-weight: 600; }
-        .price-val { font-size: 18px; font-weight: 700; color: #1d1d1f; }
-        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 6px 16px; border-radius: 8px; font-size: 12px; font-weight: 600; }
-        .btn.j-btn { background-color: #ff9900; }
-        .btn.disabled { background: #d2d2d7; pointer-events: none; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        @media (max-width: 600px) { .card { flex-direction: column; } .hotel-img { width: 100%; height: 180px; } }
-    </style>
+<title>とまるん</title>
+
+<style>
+
+:root{
+--apple-blue:#0071e3;
+--apple-bg:#f5f5f7;
+}
+
+body{
+font-family:-apple-system;
+background:var(--apple-bg);
+margin:0;
+}
+
+header{
+text-align:center;
+font-weight:700;
+padding:20px;
+font-size:22px;
+background:white;
+position:sticky;
+top:0;
+}
+
+.search{
+display:flex;
+gap:10px;
+padding:20px;
+max-width:600px;
+margin:auto;
+}
+
+input{
+flex:1;
+padding:14px;
+border-radius:12px;
+border:1px solid #ccc;
+}
+
+button{
+background:var(--apple-blue);
+color:white;
+border:none;
+padding:14px;
+border-radius:12px;
+}
+
+.container{
+max-width:800px;
+margin:auto;
+padding:20px;
+}
+
+.section-title{
+font-size:20px;
+font-weight:700;
+margin-top:30px;
+margin-bottom:10px;
+}
+
+.hotel{
+background:white;
+border-radius:16px;
+margin-bottom:20px;
+overflow:hidden;
+box-shadow:0 4px 15px rgba(0,0,0,0.05);
+}
+
+.hotel img{
+width:100%;
+height:200px;
+object-fit:cover;
+}
+
+.info{
+padding:15px;
+}
+
+.price{
+color:#d6001c;
+font-size:20px;
+font-weight:700;
+}
+
+.btn{
+background:var(--apple-blue);
+color:white;
+padding:10px 16px;
+border-radius:8px;
+text-decoration:none;
+float:right;
+}
+
+</style>
 </head>
+
+
 <body>
-<header>TOMARUN</header>
-<form class="search-area" method="POST">
-    <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}" required>
-    <button type="submit">検索</button>
+
+<header>とまるん</header>
+
+<form method="POST" class="search">
+
+<input
+type="text"
+name="keyword"
+placeholder="目的地を入力"
+value="{{keyword}}"
+/>
+
+<button>検索</button>
+
 </form>
 
+
 <div class="container">
-    {% for h in hotels %}
-    <div class="card">
-        <img src="{{ h.image }}" class="hotel-img">
-        <div class="info">
-            <h2 class="hotel-name">{{ h.name }}</h2>
-            <div class="price-table">
-                <div class="ota-row">
-                    <span class="ota-label">楽天トラベル</span>
-                    <span class="price-val">{{ h.r_price }}</span>
-                    <a href="{{ h.r_url }}" class="btn" target="_blank">予約</a>
-                </div>
-                <div class="ota-row">
-                    <span class="ota-label">じゃらんnet</span>
-                    <span class="price-val">{{ h.j_price }}</span>
-                    {% if h.j_url %}
-                    <a href="{{ h.j_url }}" class="btn j-btn" target="_blank">予約</a>
-                    {% else %}
-                    <span class="btn disabled">なし</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endfor %}
+
+<div class="section-title">楽天トラベル</div>
+
+{% for h in rakuten_hotels %}
+
+<div class="hotel">
+
+<img src="{{h.hotelImageUrl}}">
+
+<div class="info">
+
+<b>{{h.hotelName}}</b><br>
+
+<div class="price">¥{{h.hotelMinCharge}}</div>
+
+<a class="btn" href="{{h.target_url}}" target="_blank">
+予約
+</a>
+
 </div>
+
+</div>
+
+{% endfor %}
+
+
+
+<div class="section-title">じゃらん</div>
+
+{% for h in jalan_hotels %}
+
+<div class="hotel">
+
+<img src="{{h.image}}">
+
+<div class="info">
+
+<b>{{h.name}}</b><br>
+
+<div class="price">¥{{h.price}}</div>
+
+<a class="btn" href="{{h.url}}" target="_blank">
+予約
+</a>
+
+</div>
+
+</div>
+
+{% endfor %}
+
+
+</div>
+
 </body>
 </html>
