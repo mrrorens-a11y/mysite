@@ -32,7 +32,7 @@
 <div class="container">
     {% for h in hotels %}
     <div class="hotel-card">
-        <img src="{{ h.hotelImageUrl }}" class="hotel-img">
+        <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}">
         <div class="hotel-info">
             <h2 class="hotel-name">{{ h.hotelName }}</h2>
             <p class="address">📍 {{ h.address1 }}{{ h.address2 }}</p>
@@ -41,7 +41,7 @@
                     <span style="font-size:11px; color:#86868b;">楽天トラベル 最安値</span><br>
                     <span class="price-val">¥{{ h.hotelMinCharge }}</span>
                 </div>
-                <a href="{{ h.target_url }}" class="btn" target="_blank">予約する</a>
+                <a href="{{ h.target_url }}" class="btn" target="_blank" rel="noopener noreferrer">予約する</a>
             </div>
         </div>
     </div>

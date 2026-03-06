@@ -27,7 +27,7 @@ def index():
                 "hits": 20
             }
             
-            # 【重要】あなたが指定した「完璧なブラウザ」のふりをするヘッダー
+            # あなたが指定した「完璧なブラウザ」のふりをするヘッダー
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
@@ -42,7 +42,7 @@ def index():
                     if 'hotels' in data:
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            # リンク先を確定させる
+                            # アフィリエイトURLがあれば優先してtarget_urlに格納
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
             except Exception as e:
@@ -51,5 +51,6 @@ def index():
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
+    # Renderのポート指定に対応
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
