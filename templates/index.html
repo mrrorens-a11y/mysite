@@ -5,94 +5,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TOMARUN | 宿泊予約</title>
     <style>
-        :root {
-            --apple-blue: #0071e3;
-            --apple-bg: #f5f5f7;
-            --apple-dark: #1d1d1f;
-        }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background-color: var(--apple-bg); 
-            color: var(--apple-dark); 
-            margin: 0; padding-bottom: 50px; 
-        }
-        header { 
-            background: rgba(255,255,255,0.8); 
-            backdrop-filter: blur(20px); 
-            padding: 20px; text-align: center; 
-            border-bottom: 1px solid #d2d2d7; 
-            position: sticky; top: 0; z-index: 100; 
-            font-weight: 700; font-size: 20px;
-        }
-        .search-area { 
-            max-width: 600px; margin: 40px auto; padding: 0 20px; 
-            display: flex; gap: 10px; 
-        }
-        input { 
-            flex: 1; padding: 15px; border-radius: 12px; 
-            border: 1px solid #d2d2d7; font-size: 16px; outline: none; 
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.05);
-        }
-        input:focus { border-color: var(--apple-blue); }
-        button { 
-            background: var(--apple-blue); color: white; border: none; 
-            padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; 
-        }
+        :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; }
+        body { font-family: -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; padding-bottom: 50px; }
+        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 18px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: 700; }
+        .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 10px; }
+        input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; }
+        button { background: var(--apple-blue); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-        .hotel-card { 
-            background: white; border-radius: 22px; margin-bottom: 25px; 
-            display: flex; overflow: hidden; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.06); 
-            transition: transform 0.2s ease;
-        }
-        .hotel-card:hover { transform: translateY(-4px); }
-        .hotel-img { width: 280px; height: 210px; object-fit: cover; }
-        .hotel-info { padding: 25px; flex: 1; display: flex; flex-direction: column; }
-        .hotel-name { font-size: 20px; font-weight: 700; margin: 0 0 10px 0; line-height: 1.4; }
-        .address { font-size: 13px; color: #86868b; margin-bottom: 20px; }
-        .price-row { 
-            margin-top: auto; padding-top: 15px; border-top: 1px solid #f2f2f2;
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .price-label { font-size: 11px; color: #86868b; font-weight: 600; text-transform: uppercase; }
-        .price-val { font-size: 24px; font-weight: 700; color: #d6001c; }
-        .btn { 
-            background: var(--apple-blue); color: white; text-decoration: none; 
-            padding: 12px 24px; border-radius: 12px; font-size: 14px; font-weight: 600; 
-        }
-        @media (max-width: 650px) {
-            .hotel-card { flex-direction: column; }
-            .hotel-img { width: 100%; height: 200px; }
-        }
+        .hotel-card { background: white; border-radius: 20px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .hotel-img { width: 260px; height: 195px; object-fit: cover; }
+        .hotel-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
+        .hotel-name { font-size: 19px; font-weight: 700; margin: 0 0 10px 0; }
+        .address { font-size: 13px; color: #86868b; margin-bottom: 15px; }
+        .price-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #f2f2f2; display: flex; align-items: center; justify-content: space-between; }
+        .price-val { font-size: 22px; font-weight: 700; color: #d6001c; }
+        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+        @media (max-width: 600px) { .hotel-card { flex-direction: column; } .hotel-img { width: 100%; height: 200px; } }
     </style>
 </head>
 <body>
-
 <header>TOMARUN</header>
-
 <form class="search-area" method="POST">
-    <input type="text" name="keyword" placeholder="目的地・宿名を入力（例：沖縄）" value="{{ keyword }}">
-    <button type="submit">検索</button>
+    <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}">
+    <button type="submit">探す</button>
 </form>
-
 <div class="container">
     {% for h in hotels %}
     <div class="hotel-card">
-        <img src="{{ h.image }}" class="hotel-img" alt="{{ h.name }}">
+        <img src="{{ h.hotelImageUrl }}" class="hotel-img">
         <div class="hotel-info">
-            <h2 class="hotel-name">{{ h.name }}</h2>
-            <p class="address">📍 {{ h.address }}</p>
+            <h2 class="hotel-name">{{ h.hotelName }}</h2>
+            <p class="address">📍 {{ h.address1 }}{{ h.address2 }}</p>
             <div class="price-row">
                 <div>
-                    <span class="price-label">楽天トラベル 最安値</span><br>
-                    <span class="price-val">¥{{ h.price }}</span>
+                    <span style="font-size:11px; color:#86868b;">楽天トラベル 最安値</span><br>
+                    <span class="price-val">¥{{ h.hotelMinCharge }}</span>
                 </div>
-                <a href="{{ h.url }}" class="btn" target="_blank">予約する</a>
+                <a href="{{ h.target_url }}" class="btn" target="_blank">予約する</a>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
-
 </body>
 </html>
