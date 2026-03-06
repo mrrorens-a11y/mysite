@@ -15,17 +15,21 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         if keyword:
-            # 【重要】URLの最後に「.json」を直接つけました。これで404は出せません。
-            url = "https://webservice.recruit.co.jp/jalan/hotel/v1.json" 
+            # URLはこれで確定です
+            url = "https://webservice.recruit.co.jp/jalan/hotel/v1/" 
             params = {
                 "key": RECRUIT_API_KEY,
                 "keyword": keyword,
-                "count": 10
-                # "format": "json" はURLに含めたので不要になります
+                "count": 10,
+                "format": "json"
+            }
+            # 【重要】リクルートに「ブラウザからのアクセスだよ」と思わせるヘッダー
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Referer": "https://mysite-l8l0.onrender.com/"
             }
             try:
-                # 余計な末尾処理をせず、そのままリクエスト
-                res = requests.get(url, params=params, timeout=10)
+                res = requests.get(url, params=params, headers=headers, timeout=10)
                 
                 api_status = f"Status: {res.status_code}"
                 
@@ -33,7 +37,7 @@ def index():
                     data = res.json()
                     j_hotels = data.get('results', {}).get('hotel', [])
                     if j_hotels:
-                        api_status += f" | ✅{len(j_hotels)}件の宿を表示中"
+                        api_status += f" | ✅成功！{len(j_hotels)}件表示"
                         for jh in j_hotels:
                             hotels.append({
                                 "name": jh.get('hotel_name'),
@@ -43,13 +47,13 @@ def index():
                                 "address": jh.get('address')
                             })
                     else:
-                        api_status += " | ⚠️データが空です（キーは正常）"
+                        api_status += " | ⚠️データなし（キーワード不適合）"
                 else:
-                    # 404が出た場合、URLがどう作られたかヒントを表示
-                    api_status += f" | ❌エラー内容: {res.text[:30]}"
+                    # 403の時、何が拒否されたかログに出す
+                    api_status += f" | ❌拒否されました (403)"
                     
             except Exception as e:
-                api_status = f"🔥接続失敗: {str(e)}"
+                api_status = f"🔥接続エラー: {str(e)}"
 
     return render_template('index.html', hotels=hotels, keyword=keyword, api_status=api_status)
 
