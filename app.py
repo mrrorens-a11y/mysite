@@ -1,56 +1,84 @@
 import os
 import requests
+import math
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数を取得
+# Renderの環境変数から取得
+RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
-RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
+
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+
+def calculate_distance(lat1, lon1, lat2, lon2):
+    if not lat1 or not lon1 or not lat2 or not lon2:
+        return None
+    R = 6371.0
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
     hotels = []
-    keyword = request.form.get('keyword', '').strip() if request.method == 'POST' else ""
-    debug_msg = ""
-    
-    if keyword:
-        # 楽天トラベルキーワード検索API
-        r_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-        r_params = {
-            "applicationId": RAKUTEN_APP_ID,
-            "affiliateId": RAKUTEN_AFFILIATE_ID,
-            "keyword": keyword,
-            "hits": 10,
-            "format": "json"
-        }
-        
-        try:
-            res = requests.get(r_url, params=r_params, timeout=10)
-            if res.status_code == 200:
-                data = res.json()
-                r_hotels = data.get('hotels', [])
-                
-                if not r_hotels:
-                    debug_msg = f"「{keyword}」で見つかりませんでした。"
-                else:
-                    for item in r_hotels:
-                        h = item['hotel'][0]['hotelBasicInfo']
-                        hotels.append({
-                            "name": h.get('hotelName'),
-                            "image": h.get('hotelImageUrl'),
-                            "price": f"¥{h.get('hotelMinCharge', '---')}",
-                            "url": h.get('affiliateUrl') or h.get('hotelInformationUrl'),
-                            "address": h.get('address1') + h.get('address2')
-                        })
-            else:
-                debug_msg = f"楽天APIエラー: {res.status_code}"
-        except Exception as e:
-            debug_msg = f"接続エラー: {str(e)}"
+    keyword = ""
+    if request.method == 'POST':
+        keyword = request.form.get('keyword')
+        if keyword:
+            params = {
+                "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
+                "affiliateId": RAKUTEN_AFFILIATE_ID,
+                "format": "json",
+                "keyword": keyword,
+                "hits": 20
+            }
+            
+            headers = {
+                "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
+                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "accept": "application/json"
+            }
 
-    return render_template('index.html', hotels=hotels, keyword=keyword, debug_msg=debug_msg)
+            try:
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                if res.status_code == 200:
+                    data = res.json()
+                    if 'hotels' in data:
+                        # 成功時のロジック：1番目の宿を基準にする形に戻します
+                        first_hotel = data['hotels'][0]['hotel'][0]['hotelBasicInfo']
+                        base_lat = float(first_hotel['latitude']) / 3600000
+                        base_lon = float(first_hotel['longitude']) / 3600000
+                        
+                        for h in data['hotels']:
+                            info = h['hotel'][0]['hotelBasicInfo']
+                            lat = float(info['latitude']) / 3600000
+                            lon = float(info['longitude']) / 3600000
+
+                            dist = calculate_distance(base_lat, base_lon, lat, lon)
+                            
+                            if dist is not None:
+                                if dist < 0.1:
+                                    info['display_distance'] = "すぐ近く"
+                                elif dist < 1.0:
+                                    meters = int(dist * 1000)
+                                    info['display_distance'] = f"{meters}m"
+                                else:
+                                    info['display_distance'] = f"{round(dist, 1)}km"
+                            else:
+                                info['display_distance'] = ""
+
+                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
+                            hotels.append(info)
+            except Exception as e:
+                print(f"DEBUG: Error: {e}")
+
+    return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))
