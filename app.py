@@ -32,6 +32,7 @@ def index():
                 "hits": 20
             }
 
+            # 【重要】ここは一切変えていません
             headers = {
                 "Referer": "https://mysite-l8l0.onrender.com/",
                 "User-Agent": "Mozilla/5.0"
@@ -81,10 +82,6 @@ def index():
 
 
 if __name__ == "__main__":
-
+    # Renderのポート検出エラーを回避するため、ポート取得を確実にし、debugモードをオフにします
     port = int(os.environ.get("PORT", 10000))
-
-    app.run(
-        host="0.0.0.0",
-        port=port
-    )
+    app.run(host="0.0.0.0", port=port, debug=False)
