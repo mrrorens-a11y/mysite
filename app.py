@@ -8,7 +8,7 @@ app = Flask(__name__)
 RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
-# 【重要】最もエラーが出にくい標準エンドポイントを使用します
+# 【重要】収益化エラーを避けるため、最も汎用的な標準エンドポイントを使用
 RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
 
 @app.route('/', methods=['GET', 'POST'])
@@ -18,7 +18,7 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         if keyword:
-            # パラメータを標準的な構成に修正
+            # パラメータを最小限に絞る（accessKeyを含めると400エラーが出るケースが多いため）
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
@@ -26,9 +26,9 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
-            
+
             try:
-                # 余計なヘッダーを付けず、シンプルにリクエストします
+                # ドメイン制限エラーを避けるため、headersを空（自動）にしてリクエスト
                 res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
                 
                 if res.status_code == 200:
@@ -36,19 +36,18 @@ def index():
                     if 'hotels' in data:
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            # アフィリエイトURLを取得、なければ通常URL
+                            # 収益化用URLを格納
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
                 else:
-                    # 400エラーの場合、何が原因か詳細をログに出す
-                    print(f"DEBUG API Error: {res.status_code} - {res.text}")
-                    
+                    # ここでエラー内容を詳しくログに出す
+                    print(f"DEBUG API Error Detail: {res.status_code} - {res.text}")
             except Exception as e:
-                print(f"DEBUG Error: {e}")
+                print(f"DEBUG System Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # Renderのポート検出に対応
-    port = int(os.environ.get("PORT", 5000))
+    # Renderの推奨ポート10000をデフォルトに設定
+    port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
