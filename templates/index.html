@@ -3,45 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TOMARUN | 宿泊予約</title>
+    <title>TOMARUN | Jalan Edition</title>
     <style>
-        :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; }
+        :root { --jalan-orange: #ff9900; --apple-bg: #f5f5f7; }
         body { font-family: -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; padding-bottom: 50px; }
-        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 18px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: 700; }
+        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 20px; text-align: center; border-bottom: 1px solid #d2d2d7; position: sticky; top: 0; z-index: 100; font-weight: 700; color: var(--jalan-orange); }
         .search-area { max-width: 600px; margin: 30px auto; padding: 0 20px; display: flex; gap: 10px; }
         input { flex: 1; padding: 14px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 16px; outline: none; }
-        button { background: var(--apple-blue); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        button { background: var(--jalan-orange); color: white; border: none; padding: 10px 25px; border-radius: 12px; font-weight: 600; cursor: pointer; }
         .container { max-width: 800px; margin: 0 auto; padding: 0 20px; }
-        .hotel-card { background: white; border-radius: 20px; margin-bottom: 25px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        .hotel-img { width: 260px; height: 195px; object-fit: cover; }
-        .hotel-info { padding: 20px; flex: 1; display: flex; flex-direction: column; }
-        .hotel-name { font-size: 19px; font-weight: 700; margin: 0 0 10px 0; }
-        .address { font-size: 13px; color: #86868b; margin-bottom: 15px; }
-        .price-row { margin-top: auto; padding-top: 15px; border-top: 1px solid #f2f2f2; display: flex; align-items: center; justify-content: space-between; }
-        .price-val { font-size: 22px; font-weight: 700; color: #d6001c; }
-        .btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; }
-        @media (max-width: 600px) { .hotel-card { flex-direction: column; } .hotel-img { width: 100%; height: 200px; } }
+        .card { background: white; border-radius: 20px; margin-bottom: 20px; display: flex; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .hotel-img { width: 240px; height: 180px; object-fit: cover; }
+        .info { padding: 20px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .hotel-name { font-size: 18px; font-weight: 700; margin: 0; }
+        .price-row { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; }
+        .price { font-size: 22px; font-weight: 700; color: #d6001c; }
+        .btn { background: var(--jalan-orange); color: white; text-decoration: none; padding: 10px 20px; border-radius: 10px; font-size: 14px; font-weight: 600; }
+        @media (max-width: 600px) { .card { flex-direction: column; } .hotel-img { width: 100%; } }
     </style>
 </head>
 <body>
-<header>TOMARUN</header>
+<header>TOMARUN powered by Jalan</header>
 <form class="search-area" method="POST">
-    <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}">
-    <button type="submit">探す</button>
+    <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}" required>
+    <button type="submit">検索</button>
 </form>
 <div class="container">
     {% for h in hotels %}
-    <div class="hotel-card">
-        <img src="{{ h.hotelImageUrl }}" class="hotel-img">
-        <div class="hotel-info">
-            <h2 class="hotel-name">{{ h.hotelName }}</h2>
-            <p class="address">📍 {{ h.address1 }}{{ h.address2 }}</p>
+    <div class="card">
+        <img src="{{ h.image }}" class="hotel-img" onerror="this.src='https://placehold.jp/24/cccccc/ffffff/200x150.png?text=No+Image'">
+        <div class="info">
+            <div>
+                <h3 class="hotel-name">{{ h.name }}</h3>
+                <p style="font-size:12px; color:#86868b; margin-top:5px;">📍 {{ h.address }}</p>
+            </div>
             <div class="price-row">
-                <div>
-                    <span style="font-size:11px; color:#86868b;">楽天トラベル 最安値</span><br>
-                    <span class="price-val">¥{{ h.hotelMinCharge }}</span>
-                </div>
-                <a href="{{ h.target_url }}" class="btn" target="_blank">予約する</a>
+                <span class="price">{{ h.price }}</span>
+                <a href="{{ h.url }}" class="btn" target="_blank">じゃらんで予約</a>
             </div>
         </div>
     </div>
