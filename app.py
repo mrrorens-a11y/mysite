@@ -4,7 +4,6 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数
 RECRUIT_API_KEY = os.environ.get('RECRUIT_API_KEY')
 
 @app.route('/', methods=['GET', 'POST'])
@@ -16,25 +15,28 @@ def index():
     if request.method == 'POST':
         keyword = request.form.get('keyword', '').strip()
         if keyword:
-            # 修正ポイント：URLの末尾を確実にAPIが受け取れる形にしました
-            url = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
+            # 【重要】URLの末尾にスラッシュを入れず、json形式を明示
+            url = "https://webservice.recruit.co.jp/jalan/hotel/v1" 
             params = {
                 "key": RECRUIT_API_KEY,
                 "keyword": keyword,
                 "count": 10,
-                "format": "json" # ここでjsonを指定
+                "format": "json"  # 小文字でjson
             }
             try:
-                # 404を防ぐために、あえて最後にスラッシュを入れない、またはパラメータを厳密に送ります
-                res = requests.get(url.rstrip('/'), params=params, timeout=10)
+                # タイムアウトを少し長めの15秒に設定（迷いを防ぐ）
+                res = requests.get(url, params=params, timeout=15)
                 
                 api_status = f"Status: {res.status_code}"
                 
                 if res.status_code == 200:
                     data = res.json()
-                    # じゃらん特有のデータ構造（results -> hotel）を正しく解析
-                    j_hotels = data.get('results', {}).get('hotel', [])
+                    # 階層を深くチェック
+                    results = data.get('results', {})
+                    j_hotels = results.get('hotel', [])
+                    
                     if j_hotels:
+                        api_status += f" | ✅{len(j_hotels)}件ヒット！"
                         for jh in j_hotels:
                             hotels.append({
                                 "name": jh.get('hotel_name'),
@@ -44,12 +46,13 @@ def index():
                                 "address": jh.get('address')
                             })
                     else:
-                        api_status += " | ⚠️宿が0件です（キーワードを変えてみてください）"
+                        api_status += " | ⚠️宿が見つかりません（APIは正常応答）"
                 else:
-                    api_status += f" | ❌通信失敗（URLまたはキーの不備）"
+                    # 404の時に、APIが何を言っているか中身を少し覗く
+                    api_status += f" | ❌詳細: {res.text[:50]}"
                     
             except Exception as e:
-                api_status = f"🔥エラー: {str(e)}"
+                api_status = f"🔥接続エラー: {str(e)}"
 
     return render_template('index.html', hotels=hotels, keyword=keyword, api_status=api_status)
 
