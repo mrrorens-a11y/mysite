@@ -9,7 +9,8 @@ RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
 RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
 RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
 
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+# より安定した標準のAPIエンドポイントに変更
+RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -27,7 +28,7 @@ def index():
                 "hits": 20
             }
             
-            # あなたが指定した「完璧なブラウザ」のふりをするヘッダー
+            # 完璧なブラウザのふりをするヘッダー
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
@@ -42,15 +43,17 @@ def index():
                     if 'hotels' in data:
                         for h in data['hotels']:
                             info = h['hotel'][0]['hotelBasicInfo']
-                            # アフィリエイトURLがあれば優先してtarget_urlに格納
+                            # アフィリエイトURLの取得（ここで収益化）
                             info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
                             hotels.append(info)
+                else:
+                    print(f"DEBUG API Error: {res.status_code} - {res.text}")
             except Exception as e:
                 print(f"DEBUG Error: {e}")
 
     return render_template('index.html', hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # Renderのポート指定に対応
-    port = int(os.environ.get("PORT", 10000))
+    # Renderのポート検出エラーを回避するための設定
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
