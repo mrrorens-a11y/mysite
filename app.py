@@ -4,82 +4,100 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Render環境変数
+print("===== APP START =====")
+
+# 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
-RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
+
+print("APP_ID:", RAKUTEN_APP_ID)
+print("ACCESS_KEY:", RAKUTEN_ACCESS_KEY)
+print("AFFILIATE_ID:", RAKUTEN_AFFILIATE_ID)
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-def get_jalan_price(hotel_name):
-    """宿名でじゃらんを検索し、最安値とURLを返す"""
-    params = {
-        "key": RECRUIT_API_KEY,
-        "keyword": hotel_name,
-        "format": "json",
-        "count": 1
-    }
-    try:
-        res = requests.get(JALAN_API_URL, params=params, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            hotels = data.get('results', {}).get('hotel', [])
-            if hotels:
-                h = hotels[0]
-                # じゃらんの価格（サンプル。APIにより取得項目は調整が必要な場合があります）
-                return {
-                    "price": h.get("sampleRateFrom", "---"),
-                    "url": h.get("urls", {}).get("pc")
-                }
-    except:
-        pass
-    return None
 
 @app.route("/", methods=["GET", "POST"])
 def index():
+
+    print("===== INDEX PAGE =====")
+
     hotels = []
     keyword = ""
+
     if request.method == "POST":
+
         keyword = request.form.get("keyword", "").strip()
+        print("SEARCH KEYWORD:", keyword)
+
         if keyword:
+
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
-                "hits": 10 # 比較処理を速くするため一旦10件
+                "hits": 20
             }
+
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
-                "user-agent": "Mozilla/5.0"
+                "origin": "https://mysite-l8l0.onrender.com",
+                "user-agent": "Mozilla/5.0",
+                "accept": "application/json"
             }
+
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
-                if res.status_code == 200:
-                    data = res.json()
-                    for h in data.get("hotels", []):
+
+                print("===== CALLING RAKUTEN API =====")
+
+                res = requests.get(
+                    RAKUTEN_API_URL,
+                    params=params,
+                    headers=headers,
+                    timeout=10
+                )
+
+                print("API STATUS:", res.status_code)
+
+                if res.status_code != 200:
+                    print("API ERROR BODY:", res.text)
+
+                data = res.json()
+
+                if "hotels" in data:
+
+                    for h in data["hotels"]:
+
                         info = h["hotel"][0]["hotelBasicInfo"]
-                        
-                        # じゃらんの情報を取得
-                        jalan_info = get_jalan_price(info["hotelName"])
-                        
-                        hotel_data = {
-                            "name": info["hotelName"],
-                            "img": info["hotelImageUrl"],
-                            "address": f"{info['address1']}{info['address2']}",
-                            "rakuten_price": info.get("hotelMinCharge", "---"),
-                            "rakuten_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                            "jalan_price": jalan_info["price"] if jalan_info else "---",
-                            "jalan_url": jalan_info["url"] if jalan_info else None
-                        }
-                        hotels.append(hotel_data)
+
+                        print("HOTEL:", info.get("hotelName"))
+                        print("affiliateUrl:", info.get("affiliateUrl"))
+                        print("normalUrl:", info.get("hotelInformationUrl"))
+
+                        info["target_url"] = (
+                            info.get("affiliateUrl")
+                            or info.get("hotelInformationUrl")
+                        )
+
+                        hotels.append(info)
+
             except Exception as e:
+
                 print("SYSTEM ERROR:", e)
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
+
 if __name__ == "__main__":
+
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+
+    print("START SERVER PORT:", port)
+
+    app.run(
+        host="0.0.0.0",
+        port=port
+    )
