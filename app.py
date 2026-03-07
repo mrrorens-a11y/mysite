@@ -4,25 +4,37 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# Renderの環境変数から取得
-RAKUTEN_APP_ID = os.environ.get('RAKUTEN_APP_ID')
-RAKUTEN_ACCESS_KEY = os.environ.get('RAKUTEN_ACCESS_KEY')
-RAKUTEN_AFFILIATE_ID = os.environ.get('RAKUTEN_AFFILIATE_ID')
+print("===== APP STARTING =====")
+
+# 環境変数
+RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
+RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
+RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
+
+print("APP_ID:", RAKUTEN_APP_ID)
+print("AFFILIATE_ID:", RAKUTEN_AFFILIATE_ID)
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-@app.route('/', methods=['GET', 'POST'])
+
+@app.route("/", methods=["GET", "POST"])
 def index():
+
+    print("===== INDEX PAGE ACCESSED =====")
+
     hotels = []
     keyword = ""
 
-    if request.method == 'POST':
-        keyword = request.form.get('keyword', '').strip()
+    if request.method == "POST":
+
+        keyword = request.form.get("keyword", "").strip()
+
+        print("SEARCH KEYWORD:", keyword)
 
         if keyword:
+
             params = {
                 "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
@@ -37,38 +49,54 @@ def index():
             }
 
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
 
-                print("DEBUG STATUS:", res.status_code)
+                print("===== CALLING RAKUTEN API =====")
 
-                if res.status_code == 200:
-                    data = res.json()
+                res = requests.get(
+                    RAKUTEN_API_URL,
+                    params=params,
+                    headers=headers,
+                    timeout=10
+                )
 
-                    if 'hotels' in data:
-                        for h in data['hotels']:
-                            info = h['hotel'][0]['hotelBasicInfo']
+                print("API STATUS:", res.status_code)
 
-                            # ▼ここが確認ポイント
-                            print("DEBUG affiliateUrl:", info.get("affiliateUrl"))
-                            print("DEBUG normalUrl:", info.get("hotelInformationUrl"))
+                data = res.json()
 
-                            info['target_url'] = info.get('affiliateUrl') or info.get('hotelInformationUrl')
+                print("API RESPONSE KEYS:", data.keys())
 
-                            hotels.append(info)
+                if "hotels" in data:
 
-                else:
-                    print("DEBUG API ERROR:", res.text)
+                    for h in data["hotels"]:
+
+                        info = h["hotel"][0]["hotelBasicInfo"]
+
+                        print("HOTEL:", info.get("hotelName"))
+                        print("affiliateUrl:", info.get("affiliateUrl"))
+                        print("normalUrl:", info.get("hotelInformationUrl"))
+
+                        info["target_url"] = (
+                            info.get("affiliateUrl")
+                            or info.get("hotelInformationUrl")
+                        )
+
+                        hotels.append(info)
 
             except Exception as e:
-                print("DEBUG SYSTEM ERROR:", e)
 
-    return render_template('index.html', hotels=hotels, keyword=keyword)
+                print("ERROR:", e)
+
+    return render_template("index.html", hotels=hotels, keyword=keyword)
 
 
 if __name__ == "__main__":
+
     port = int(os.environ.get("PORT", 10000))
+
+    print("STARTING SERVER PORT:", port)
 
     app.run(
         host="0.0.0.0",
-        port=port
+        port=port,
+        debug=False
     )
