@@ -37,9 +37,6 @@ def index():
             }
 
             try:
-                # ログ開始
-                print(f"===== SEARCH START: {keyword} =====")
-
                 res = requests.get(
                     RAKUTEN_API_URL,
                     params=params,
@@ -52,22 +49,11 @@ def index():
                     if "hotels" in data:
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
-                            
-                            # --- ログ出力コードの復活 ---
-                            print("HOTEL:", info.get("hotelName"))
-                            print("affiliateUrl:", info.get("affiliateUrl"))
-                            print("normalUrl:", info.get("hotelInformationUrl"))
-                            # -------------------------
-
-                            # 実際にボタンで使うURLを決定
                             info["target_url"] = (
                                 info.get("affiliateUrl")
                                 or info.get("hotelInformationUrl")
                             )
                             hotels.append(info)
-                else:
-                    print(f"API ERROR: {res.status_code} - {res.text}")
-
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
