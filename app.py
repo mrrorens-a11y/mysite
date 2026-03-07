@@ -60,6 +60,7 @@ def index():
                 )
 
                 print("API STATUS:", res.status_code)
+　　　　　　　　print("API ERROR BODY:", res.text)
 
                 data = res.json()
 
