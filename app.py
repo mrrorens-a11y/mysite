@@ -8,9 +8,11 @@ print("===== APP START =====")
 
 # 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
+RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 
 print("APP_ID:", RAKUTEN_APP_ID)
+print("ACCESS_KEY:", RAKUTEN_ACCESS_KEY)
 print("AFFILIATE_ID:", RAKUTEN_AFFILIATE_ID)
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
