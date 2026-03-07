@@ -33,6 +33,7 @@ def index():
 
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
