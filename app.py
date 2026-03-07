@@ -4,7 +4,7 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# --- 環境変数などのロジックは変更なし ---
+# 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
@@ -15,8 +15,10 @@ RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelS
 def index():
     hotels = []
     keyword = ""
+
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
+
         if keyword:
             params = {
                 "applicationId": RAKUTEN_APP_ID,
@@ -26,28 +28,51 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
+
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
                 "user-agent": "Mozilla/5.0",
                 "accept": "application/json"
             }
+
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                # ログ開始
+                print(f"===== SEARCH START: {keyword} =====")
+
+                res = requests.get(
+                    RAKUTEN_API_URL,
+                    params=params,
+                    headers=headers,
+                    timeout=10
+                )
+
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
-                            info["target_url"] = info.get("affiliateUrl") or info.get("hotelInformationUrl")
+                            
+                            # --- ログ出力コードの復活 ---
+                            print("HOTEL:", info.get("hotelName"))
+                            print("affiliateUrl:", info.get("affiliateUrl"))
+                            print("normalUrl:", info.get("hotelInformationUrl"))
+                            # -------------------------
+
+                            # 実際にボタンで使うURLを決定
+                            info["target_url"] = (
+                                info.get("affiliateUrl")
+                                or info.get("hotelInformationUrl")
+                            )
                             hotels.append(info)
+                else:
+                    print(f"API ERROR: {res.status_code} - {res.text}")
+
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
-# --- 修正箇所：Renderの推奨設定 ---
-# ポート番号を関数の外、またはgunicornから見える位置で確保します
 if __name__ == "__main__":
-    # ローカル開発環境でのみ実行される
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
