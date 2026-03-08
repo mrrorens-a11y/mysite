@@ -18,107 +18,62 @@
             -webkit-font-smoothing: antialiased;
         }
 
-        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 12px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #d2d2d7; }
-        .logo { font-size: 1.4rem; font-weight: 700; text-transform: uppercase; color: var(--text-main); cursor: pointer; margin: 0; }
+        header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 16px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid #d2d2d7; }
+        .logo { font-size: 1.2rem; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; color: var(--text-main); cursor: pointer; margin: 0; }
 
-        .top-content { padding-bottom: 10px; }
-        .catch-copy { text-align: center; font-size: 12px; font-weight: 600; color: var(--text-sub); margin: 10px 0; }
+        .search-section { padding: 40px 20px 20px 20px; text-align: center; }
+        .catch-copy { font-size: 24px; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.5px; }
 
-        .search-area { padding: 0 15px; display: flex; gap: 8px; margin-bottom: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 15px; outline: none; background: white; }
-        button { background: var(--text-main); color: white; border: none; padding: 0 18px; border-radius: 12px; font-weight: 600; cursor: pointer; }
+        .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        input { flex: 1; padding: 12px 16px; border: none; font-size: 16px; outline: none; background: transparent; }
+        button { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
 
-        .carousel-container { display: flex; overflow-x: auto; padding: 0 15px 15px 15px; gap: 15px; scroll-snap-type: x mandatory; }
-        .carousel-container::-webkit-scrollbar { display: none; }
+        .suggest-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 20px; }
+        .tag { background: white; border: 1px solid #d2d2d7; padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-main); }
 
-        .spot-grid-block { 
-            flex: 0 0 85%; 
-            scroll-snap-align: start;
-            background: white; border-radius: 20px; padding: 15px; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.08); 
-        }
-
-        .grid-title { font-size: 14px; font-weight: 700; margin-bottom: 12px; border-left: 3px solid var(--apple-blue); padding-left: 8px; color: var(--text-main); }
-        
-        .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-        .spot-card { cursor: pointer; text-align: center; }
-        .spot-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; background: #eee; display: block; }
-        .spot-card span { font-size: 11px; font-weight: 600; display: block; margin-top: 5px; color: #333; }
-
-        .hotel-container { padding: 0 15px; }
+        .hotel-container { padding: 20px 15px; }
         .hotel-card { 
-            background: white; border-radius: 24px; margin-bottom: 25px; 
+            background: white; border-radius: 24px; margin-bottom: 24px; 
             overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-            display: flex;
-            flex-direction: column;
-            height: 420px; 
+            display: flex; flex-direction: column;
         }
-        .hotel-img-wrapper { width: 100%; height: 200px; flex-shrink: 0; }
+        .hotel-img-wrapper { width: 100%; height: 220px; position: relative; }
         .hotel-img { width: 100%; height: 100%; object-fit: cover; }
         
-        .hotel-info { 
-            padding: 16px; 
-            flex-grow: 1; 
-            display: flex; 
-            flex-direction: column; 
-            justify-content: space-between; 
-        }
-        .hotel-name { font-size: 17px; font-weight: 700; margin: 0; line-height: 1.4; color: var(--text-main); }
-        
+        .hotel-info { padding: 20px; }
+        .hotel-name { font-size: 18px; font-weight: 700; margin: 0 0 8px 0; line-height: 1.4; }
+        .hotel-address { font-size: 12px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; }
+
         .price-row { 
-            display: flex; 
-            align-items: flex-end; /* 下揃えにしてボタンと高さを合わせる */
-            justify-content: space-between; 
-            border-top: 1px solid #f2f2f2; 
-            padding-top: 12px; 
-            margin-top: auto; 
+            display: flex; align-items: flex-end; justify-content: space-between; 
+            border-top: 1px solid #f2f2f2; padding-top: 16px; margin-top: 16px; 
         }
-        .price-label { font-size: 10px; font-weight: 700; color: #d6001c; display: block; margin-bottom: -2px; }
-        .price-val { font-size: 22px; font-weight: 700; color: #d6001c; }
-        .book-btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 22px; border-radius: 14px; font-size: 14px; font-weight: 700; }
+        .price-label { font-size: 11px; font-weight: 700; color: #d6001c; display: block; }
+        .price-val { font-size: 24px; font-weight: 700; color: #d6001c; }
+        .book-btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 12px 24px; border-radius: 14px; font-size: 14px; font-weight: 700; }
     </style>
 </head>
 <body>
 
 <header><h1 class="logo" onclick="location.href='/'">Tomarun</h1></header>
 
-<div class="top-content">
-    <p class="catch-copy">目的地を入力して、かんたん宿検索</p>
+<div class="search-section">
+    {% if not keyword %}
+    <p class="catch-copy">最高の沖縄を、<br>最安値で見つけよう。</p>
+    {% endif %}
 
     <form class="search-area" method="POST">
-        <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}">
+        <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}" autocomplete="off">
         <button type="submit">検索</button>
     </form>
 
     {% if not keyword %}
-    <div class="carousel-container">
-        <div class="spot-grid-block">
-            <div class="grid-title">沖縄定番スポット</div>
-            <div class="spot-grid">
-                <div class="spot-card" onclick="quickSearch('美ら海水族館')"><img src="https://images.unsplash.com/photo-1598918231221-5f053229b359?w=300"><span>美ら海</span></div>
-                <div class="spot-card" onclick="quickSearch('首里城')"><img src="https://images.unsplash.com/photo-1606509012399-563b72807860?w=300"><span>首里城</span></div>
-                <div class="spot-card" onclick="quickSearch('国際通り')"><img src="https://images.unsplash.com/photo-1590230440618-97f26715f795?w=300"><span>国際通り</span></div>
-                <div class="spot-card" onclick="quickSearch('万座毛')"><img src="https://images.unsplash.com/photo-1553655113-d0216124794e?w=300"><span>万座毛</span></div>
-            </div>
-        </div>
-        <div class="spot-grid-block">
-            <div class="grid-title">癒やしの離島巡り</div>
-            <div class="spot-grid">
-                <div class="spot-card" onclick="quickSearch('石垣島')"><img src="https://images.unsplash.com/photo-1551806235-6629bc24457a?w=300"><span>石垣島</span></div>
-                <div class="spot-card" onclick="quickSearch('宮古島')"><img src="https://images.unsplash.com/photo-1534720163351-4043f47e305e?w=300"><span>宮古島</span></div>
-                <div class="spot-card" onclick="quickSearch('古宇利島')"><img src="https://images.unsplash.com/photo-1635339650426-302381e4c70d?w=300"><span>古宇利島</span></div>
-                <div class="spot-card" onclick="quickSearch('竹富島')"><img src="https://images.unsplash.com/photo-1542640244-7e672d6cef21?w=300"><span>竹富島</span></div>
-            </div>
-        </div>
-        <div class="spot-grid-block">
-            <div class="grid-title">写真映えスポット</div>
-            <div class="spot-grid">
-                <div class="spot-card" onclick="quickSearch('アメリカンビレッジ')"><img src="https://images.unsplash.com/photo-1528127269322-539801943592?w=300"><span>アメリカンV</span></div>
-                <div class="spot-card" onclick="quickSearch('瀬長島')"><img src="https://images.unsplash.com/photo-1506466010722-395aa2bef877?w=300"><span>瀬長島</span></div>
-                <div class="spot-card" onclick="quickSearch('備瀬のフクギ並木')"><img src="https://images.unsplash.com/photo-1543348122-959c071665a4?w=300"><span>フクギ並木</span></div>
-                <div class="spot-card" onclick="quickSearch('波の上ビーチ')"><img src="https://images.unsplash.com/photo-1610423184518-7b96677f2f11?w=300"><span>波の上</span></div>
-            </div>
-        </div>
+    <div class="suggest-tags">
+        <div class="tag" onclick="quickSearch('那覇')">那覇</div>
+        <div class="tag" onclick="quickSearch('恩納村')">恩納村</div>
+        <div class="tag" onclick="quickSearch('名護')">名護</div>
+        <div class="tag" onclick="quickSearch('石垣島')">石垣島</div>
     </div>
     {% endif %}
 </div>
@@ -126,18 +81,19 @@
 <div class="hotel-container">
     {% for h in hotels %}
     <div class="hotel-card">
-        <div class="hotel-img-wrapper"><img src="{{ h.hotelImageUrl }}" class="hotel-img" loading="lazy"></div>
+        <div class="hotel-img-wrapper">
+            <img src="{{ h.hotelImageUrl }}" class="hotel-img" loading="lazy">
+        </div>
         <div class="hotel-info">
-            <div>
-                <h2 class="hotel-name">{{ h.hotelName }}</h2>
-                <p style="font-size:12px; color:var(--text-sub); margin-top:5px;">📍 {{ h.address1 }}{{ h.address2 }}</p>
-            </div>
+            <h2 class="hotel-name">{{ h.hotelName }}</h2>
+            <p class="hotel-address">📍 {{ h.address1 }}{{ h.address2 }}</p>
+            
             <div class="price-row">
                 <div>
-                    <span class="price-label">最安値</span>
+                    <span class="price-label">楽天トラベル最安値</span>
                     <span class="price-val">¥{{ h.hotelMinCharge }}</span><span style="font-size:12px; color:var(--text-sub);">〜</span>
                 </div>
-                <a href="{{ h.target_url }}" class="book-btn" target="_blank">予約</a>
+                <a href="{{ h.target_url }}" class="book-btn" target="_blank">予約する</a>
             </div>
         </div>
     </div>
@@ -145,9 +101,9 @@
 </div>
 
 <script>
-    function quickSearch(keyword) {
+    function quickSearch(word) {
         const input = document.querySelector('input[name="keyword"]');
-        input.value = keyword;
+        input.value = word;
         document.querySelector('form').submit();
     }
 </script>
