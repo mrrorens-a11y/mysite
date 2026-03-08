@@ -8,68 +8,61 @@
     <style>
         :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; --card-border: #d2d2d7; --text-main: #1d1d1f; --text-sub: #86868b; }
         body { font-family: 'Inter', -apple-system, sans-serif; background-color: var(--apple-bg); margin: 0; color: var(--text-main); -webkit-font-smoothing: antialiased; }
-        
         header { background: rgba(255,255,255,0.8); backdrop-filter: blur(20px); padding: 15px; text-align: center; border-bottom: 1px solid var(--card-border); position: sticky; top: 0; z-index: 100; }
-        .logo { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-transform: uppercase; color: var(--text-main); }
+        .logo { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.02em; margin: 0; text-transform: uppercase; color: var(--text-main); cursor: pointer; }
 
-        /* 検索窓（復活！） */
         .search-area { max-width: 500px; margin: 20px auto; padding: 0 15px; display: flex; gap: 10px; }
         input { flex: 1; padding: 14px 18px; border-radius: 14px; border: 1px solid var(--card-border); font-size: 16px; outline: none; background: white; }
         button { background: var(--text-main); color: white; border: none; padding: 0 22px; border-radius: 14px; font-weight: 600; cursor: pointer; }
 
-        /* カルーセルセクション */
+        /* カルーセルエリア */
         .recommend-section { margin-top: 10px; overflow: hidden; }
-        .carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 15px 20px 15px; gap: 15px; -webkit-overflow-scrolling: touch; }
+        .carousel-container { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; padding: 0 15px 30px 15px; gap: 15px; -webkit-overflow-scrolling: touch; }
         .carousel-container::-webkit-scrollbar { display: none; }
-
         .spot-grid-block { flex: 0 0 85%; scroll-snap-align: start; background: white; border-radius: 16px; padding: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-        .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .spot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
         .spot-card { cursor: pointer; text-align: center; }
-        .spot-card img { width: 100%; height: 80px; object-fit: cover; border-radius: 8px; background: #eee; }
-        .spot-card span { font-size: 11px; font-weight: 600; display: block; margin-top: 4px; color: #333; }
-        .grid-label { font-size: 13px; font-weight: 700; margin: 10px 0 0 0; color: #1d1d1f; }
+        .spot-card img { width: 100%; height: 90px; object-fit: cover; border-radius: 8px; background: #e0e0e0; display: block; }
+        .spot-card span { font-size: 11px; font-weight: 600; display: block; margin-top: 6px; color: #333; }
+        .grid-label { font-size: 14px; font-weight: 700; margin: 12px 0 0 0; color: var(--text-main); }
 
         /* 宿カード */
         .container { max-width: 600px; margin: 0 auto; padding: 0 15px; }
         .hotel-card { background: white; border-radius: 20px; margin-bottom: 20px; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .hotel-img-wrapper { position: relative; width: 100%; height: 180px; }
+        .hotel-img-wrapper { width: 100%; height: 180px; }
         .hotel-img { width: 100%; height: 100%; object-fit: cover; }
         .hotel-info { padding: 16px; }
-        .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px 0; line-height: 1.3; }
-        .address { font-size: 12px; color: var(--text-sub); margin-bottom: 12px; }
-        .price-row { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f2f2f2; padding-top: 12px; }
+        .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px 0; }
+        .price-row { display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f2f2f2; padding-top: 12px; margin-top: 10px; }
         .price-val { font-size: 20px; font-weight: 700; color: #d6001c; }
         .book-btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 24px; border-radius: 12px; font-size: 13px; font-weight: 600; }
     </style>
 </head>
 <body>
 
-<header><div class="logo">Tomarun</div></header>
+<header><div class="logo" onclick="location.href='/'">Tomarun</div></header>
 
 <form class="search-area" method="POST">
     <input type="text" name="keyword" placeholder="どこへ行きますか？" value="{{ keyword }}">
     <button type="submit">検索</button>
 </form>
 
+{% if not keyword %}
 <div class="recommend-section">
     <div class="carousel-container">
         <div class="spot-grid-block">
             <div class="spot-grid">
                 <div class="spot-card" onclick="quickSearch('美ら海水族館')">
-                    <img src="https://images.unsplash.com/photo-1598918231221-5f053229b359?auto=format&fit=crop&w=200&q=80" alt="美ら海">
-                    <span>美ら海</span>
+                    <img src="https://images.unsplash.com/photo-1598918231221-5f053229b359?w=300" alt="美ら海"><span>美ら海</span>
                 </div>
                 <div class="spot-card" onclick="quickSearch('首里城')">
-                    <img src="https://images.unsplash.com/photo-1606509012399-563b72807860?auto=format&fit=crop&w=200&q=80" alt="首里城">
-                    <span>首里城</span>
+                    <img src="https://images.unsplash.com/photo-1606509012399-563b72807860?w=300" alt="首里城"><span>首里城</span>
                 </div>
                 <div class="spot-card" onclick="quickSearch('国際通り')">
-                    <img src="https://images.unsplash.com/photo-1620888206121-6784d8f56627?auto=format&fit=crop&w=200&q=80" alt="国際通り">
-                    <span>国際通り</span>
+                    <img src="https://images.unsplash.com/photo-1590230440618-97f26715f795?w=300" alt="国際通り"><span>国際通り</span>
                 </div>
-                <div class="spot-card" onclick="quickSearch('おきなわワールド')">
-                    <img src="https://images.unsplash.com/photo-1543348122-959c071665a4?auto=format&fit=crop&w=200&q=80" alt="おきなわワールド">
-                    <span>おきなわW</span>
+                <div class="spot-card" onclick="quickSearch('万座毛')">
+                    <img src="https://images.unsplash.com/photo-1553655113-d0216124794e?w=300" alt="万座毛"><span>万座毛</span>
                 </div>
             </div>
             <p class="grid-label">沖縄定番スポット</p>
@@ -78,40 +71,51 @@
         <div class="spot-grid-block">
             <div class="spot-grid">
                 <div class="spot-card" onclick="quickSearch('古宇利島')">
-                    <img src="https://images.unsplash.com/photo-1635339650426-302381e4c70d?auto=format&fit=crop&w=200&q=80" alt="古宇利島">
-                    <span>古宇利島</span>
+                    <img src="https://images.unsplash.com/photo-1635339650426-302381e4c70d?w=300" alt="古宇利"><span>古宇利島</span>
                 </div>
                 <div class="spot-card" onclick="quickSearch('石垣島')">
-                    <img src="https://images.unsplash.com/photo-1551806235-6629bc24457a?auto=format&fit=crop&w=200&q=80" alt="石垣島">
-                    <span>石垣島</span>
+                    <img src="https://images.unsplash.com/photo-1551806235-6629bc24457a?w=300" alt="石垣"><span>石垣島</span>
                 </div>
                 <div class="spot-card" onclick="quickSearch('宮古島')">
-                    <img src="https://images.unsplash.com/photo-1534720163351-4043f47e305e?auto=format&fit=crop&w=200&q=80" alt="宮古島">
-                    <span>宮古島</span>
+                    <img src="https://images.unsplash.com/photo-1534720163351-4043f47e305e?w=300" alt="宮古"><span>宮古島</span>
                 </div>
                 <div class="spot-card" onclick="quickSearch('竹富島')">
-                    <img src="https://images.unsplash.com/photo-1542640244-7e672d6cef21?auto=format&fit=crop&w=200&q=80" alt="竹富島">
-                    <span>竹富島</span>
+                    <img src="https://images.unsplash.com/photo-1542640244-7e672d6cef21?w=300" alt="竹富"><span>竹富島</span>
                 </div>
             </div>
             <p class="grid-label">癒やしの島巡り</p>
         </div>
+
+        <div class="spot-grid-block">
+            <div class="spot-grid">
+                <div class="spot-card" onclick="quickSearch('アメリカンビレッジ')">
+                    <img src="https://images.unsplash.com/photo-1528127269322-539801943592?w=300" alt="北谷"><span>アメリカンV</span>
+                </div>
+                <div class="spot-card" onclick="quickSearch('瀬長島')">
+                    <img src="https://images.unsplash.com/photo-1506466010722-395aa2bef877?w=300" alt="ウミカジ"><span>瀬長島</span>
+                </div>
+                <div class="spot-card" onclick="quickSearch('備瀬のフクギ並木')">
+                    <img src="https://images.unsplash.com/photo-1543348122-959c071665a4?w=300" alt="備瀬"><span>フクギ並木</span>
+                </div>
+                <div class="spot-card" onclick="quickSearch('波の上ビーチ')">
+                    <img src="https://images.unsplash.com/photo-1610423184518-7b96677f2f11?w=300" alt="ビーチ"><span>波の上</span>
+                </div>
+            </div>
+            <p class="grid-label">写真映えスポット</p>
+        </div>
     </div>
 </div>
+{% endif %}
 
 <div class="container">
     {% for h in hotels %}
     <div class="hotel-card">
-        <div class="hotel-img-wrapper">
-            <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}">
-        </div>
+        <div class="hotel-img-wrapper"><img src="{{ h.hotelImageUrl }}" class="hotel-img"></div>
         <div class="hotel-info">
             <h2 class="hotel-name">{{ h.hotelName }}</h2>
-            <p class="address">📍 {{ h.address1 }}{{ h.address2 }}</p>
+            <p style="font-size:12px; color:#86868b; margin:4px 0 12px 0;">📍 {{ h.address1 }}{{ h.address2 }}</p>
             <div class="price-row">
-                <div>
-                    <span class="price-val">¥{{ h.hotelMinCharge }}</span><span>〜</span>
-                </div>
+                <div><span class="price-val">¥{{ h.hotelMinCharge }}</span><span>〜</span></div>
                 <a href="{{ h.target_url }}" class="book-btn" target="_blank">予約</a>
             </div>
         </div>
@@ -122,9 +126,8 @@
 <script>
     function quickSearch(keyword) {
         const input = document.querySelector('input[name="keyword"]');
-        const form = document.querySelector('form');
         input.value = keyword;
-        form.submit();
+        document.querySelector('form').submit();
     }
 </script>
 </body>
