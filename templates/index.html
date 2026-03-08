@@ -8,7 +8,6 @@
     <style>
         :root { --apple-blue: #0071e3; --apple-bg: #f5f5f7; --text-main: #1d1d1f; --text-sub: #86868b; }
         
-        /* PCでもスマホサイズに固定 */
         body { 
             font-family: 'Inter', -apple-system, sans-serif; 
             background-color: var(--apple-bg); 
@@ -29,7 +28,6 @@
         input { flex: 1; padding: 12px; border-radius: 12px; border: 1px solid #d2d2d7; font-size: 15px; outline: none; background: white; }
         button { background: var(--text-main); color: white; border: none; padding: 0 18px; border-radius: 12px; font-weight: 600; cursor: pointer; }
 
-        /* カルーセル（4分割エリア） */
         .carousel-container { display: flex; overflow-x: auto; padding: 0 15px 15px 15px; gap: 15px; scroll-snap-type: x mandatory; }
         .carousel-container::-webkit-scrollbar { display: none; }
 
@@ -47,14 +45,13 @@
         .spot-card img { width: 100%; height: 100px; object-fit: cover; border-radius: 10px; background: #eee; display: block; }
         .spot-card span { font-size: 11px; font-weight: 600; display: block; margin-top: 5px; color: #333; }
 
-        /* 宿カード一覧（サイズ拡大・見切れ防止） */
         .hotel-container { padding: 0 15px; }
         .hotel-card { 
             background: white; border-radius: 24px; margin-bottom: 25px; 
             overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.06);
             display: flex;
             flex-direction: column;
-            height: 420px; /* カード全体の高さをしっかり確保 */
+            height: 420px; 
         }
         .hotel-img-wrapper { width: 100%; height: 200px; flex-shrink: 0; }
         .hotel-img { width: 100%; height: 100%; object-fit: cover; }
@@ -70,12 +67,13 @@
         
         .price-row { 
             display: flex; 
-            align-items: center; 
+            align-items: flex-end; /* 下揃えにしてボタンと高さを合わせる */
             justify-content: space-between; 
             border-top: 1px solid #f2f2f2; 
             padding-top: 12px; 
             margin-top: auto; 
         }
+        .price-label { font-size: 10px; font-weight: 700; color: #d6001c; display: block; margin-bottom: -2px; }
         .price-val { font-size: 22px; font-weight: 700; color: #d6001c; }
         .book-btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 10px 22px; border-radius: 14px; font-size: 14px; font-weight: 700; }
     </style>
@@ -135,7 +133,10 @@
                 <p style="font-size:12px; color:var(--text-sub); margin-top:5px;">📍 {{ h.address1 }}{{ h.address2 }}</p>
             </div>
             <div class="price-row">
-                <div><span class="price-val">¥{{ h.hotelMinCharge }}</span><span style="font-size:12px; color:var(--text-sub);">〜</span></div>
+                <div>
+                    <span class="price-label">最安値</span>
+                    <span class="price-val">¥{{ h.hotelMinCharge }}</span><span style="font-size:12px; color:var(--text-sub);">〜</span>
+                </div>
                 <a href="{{ h.target_url }}" class="book-btn" target="_blank">予約</a>
             </div>
         </div>
