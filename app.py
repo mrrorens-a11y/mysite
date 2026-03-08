@@ -4,6 +4,10 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# staticフォルダ（画像用）がなければ自動作成
+if not os.path.exists('static'):
+    os.makedirs('static')
+
 # 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
@@ -18,7 +22,6 @@ def index():
 
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
-
         if keyword:
             params = {
                 "applicationId": RAKUTEN_APP_ID,
@@ -28,43 +31,28 @@ def index():
                 "keyword": keyword,
                 "hits": 20
             }
-
             headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
                 "user-agent": "Mozilla/5.0",
                 "accept": "application/json"
             }
-
             try:
-                res = requests.get(
-                    RAKUTEN_API_URL,
-                    params=params,
-                    headers=headers,
-                    timeout=10
-                )
-
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             
-                            # ======= 【追加したログ出力コード】 =======
-                            print("HOTEL:", info.get("hotelName"))
-                            print("affiliateUrl:", info.get("affiliateUrl"))
-                            print("normalUrl:", info.get("hotelInformationUrl"))
-                            # ========================================
+                            # ======= 【ログ出力：ここを復活させました】 =======
+                            print(f"HOTEL: {info.get('hotelName')}")
+                            print(f"URL: {info.get('affiliateUrl') or info.get('hotelInformationUrl')}")
+                            # ===============================================
 
-                            # 画面表示用のURLをセット
-                            info["target_url"] = (
-                                info.get("affiliateUrl")
-                                or info.get("hotelInformationUrl")
-                            )
+                            # 画面表示用のURLをセット（収益化のための大事な部分）
+                            info["target_url"] = info.get("affiliateUrl") or info.get("hotelInformationUrl")
                             hotels.append(info)
                 else:
                     print(f"API ERROR: {res.status_code}")
-
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
