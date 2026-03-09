@@ -2,6 +2,7 @@ import os
 import asyncio
 import httpx
 import math
+import requests
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
@@ -16,7 +17,7 @@ RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- 📍 自作DB ---
+# 沖縄スポット
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781},
@@ -25,88 +26,163 @@ DESTINATIONS = {
     "首里城": {"lat": 26.2170, "lng": 127.7195},
     "アメリカンビレッジ": {"lat": 26.3164, "lng": 127.7576},
     "万座毛": {"lat": 26.5050, "lng": 127.8500},
+    "古宇利島": {"lat": 26.7020, "lng": 128.0200},
+    "瀬長島ウミカジテラス": {"lat": 26.1748, "lng": 127.6461},
+    "那覇駅": {"lat": 26.2125, "lng": 127.6792},
 }
 
+# 距離表示
 def format_distance(m):
-    try:
-        if m is None: return None
-        m = float(m)
-        return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 2)}km"
-    except: return None
+    if m is None:
+        return None
+    m = float(m)
+    if m < 1000:
+        return f"{int(m)}m"
+    else:
+        return f"{round(m/1000,2)}km"
 
+# 距離計算
 def calculate_distance(lat1, lon1, lat2, lon2):
-    try:
-        rad_lat1, rad_lon1 = math.radians(float(lat1)), math.radians(float(lon1))
-        rad_lat2, rad_lon2 = math.radians(float(lat2)), math.radians(float(lon2))
-        R = 6371000
-        dlat, dlon = rad_lat2 - rad_lat1, rad_lon2 - rad_lon1
-        a = math.sin(dlat/2)**2 + math.cos(rad_lat1) * math.cos(rad_lat2) * math.sin(dlon/2)**2
-        return R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
-    except: return None
+    if not lat2 or not lon2:
+        return None
 
-async def get_jalan_data(client, r_name):
-    if not RECRUIT_API_KEY: return "---", ""
+    R = 6371000
+    rad_lat1 = math.radians(lat1)
+    rad_lat2 = math.radians(lat2)
+    dlat = rad_lat2 - rad_lat1
+    dlon = math.radians(lon2 - lon1)
+
+    a = math.sin(dlat/2)**2 + math.cos(rad_lat1)*math.cos(rad_lat2)*math.sin(dlon/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+
+    return R * c
+
+
+# じゃらんAPI
+async def get_jalan_data(client, name):
+
+    if not RECRUIT_API_KEY:
+        return "---",""
+
+    params = {
+        "key": RECRUIT_API_KEY,
+        "keyword": name,
+        "format": "json",
+        "count": 3
+    }
+
     try:
-        j_params = {"key": RECRUIT_API_KEY, "keyword": r_name, "format": "json", "count": 5}
-        res = await client.get(JALAN_API_URL, params=j_params, timeout=5.0)
+
+        res = await client.get(JALAN_API_URL, params=params)
+
         if res.status_code == 200:
-            j_data = res.json()
-            if "results" in j_data and "hotel" in j_data["results"]:
-                for j_hotel in j_data["results"]["hotel"]:
-                    if fuzz.token_sort_ratio(r_name, j_hotel["hotelName"]) > 75:
-                        price = j_hotel.get("sampleRateFrom")
-                        return (f"¥{price}" if price else "---"), j_hotel.get("urls", {}).get("pc")
-    except: pass
-    return "---", ""
 
-@app.route("/", methods=["GET", "POST"])
+            data = res.json()
+
+            if "results" in data and "hotel" in data["results"]:
+
+                for hotel in data["results"]["hotel"]:
+
+                    if fuzz.token_sort_ratio(name, hotel["hotelName"]) > 75:
+
+                        price = hotel.get("sampleRateFrom")
+
+                        return f"¥{price}" if price else "---", hotel["urls"]["pc"]
+
+    except:
+        pass
+
+    return "---",""
+
+
+@app.route("/", methods=["GET","POST"])
 def index():
-    hotels = []
-    keyword = ""
-    if request.method == "POST":
-        keyword = request.form.get("keyword", "").strip()
-        if keyword:
-            params = {
-                "applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY,
-                "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json",
-                "keyword": keyword, "hits": 15
-            }
-            import requests
-            try:
-                res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
-                if res.status_code == 200:
-                    data = res.json()
-                    if "hotels" in data:
-                        base_coords = DESTINATIONS.get(keyword)
-                        async def fetch_all_jalan():
-                            async with httpx.AsyncClient() as client:
-                                job_list = [get_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
-                                return await asyncio.gather(*job_list)
-                        jalan_results = asyncio.run(fetch_all_jalan())
 
-                        for idx, h in enumerate(data["hotels"]):
-                            info = h["hotel"][0]["hotelBasicInfo"]
-                            j_price, j_url = jalan_results[idx]
-                            
-                            # 距離計算（少しでも怪しければ None を返すように徹底ガード）
-                            display_dist = None
-                            if base_coords:
-                                raw_dist = calculate_distance(base_coords["lat"], base_coords["lng"], info.get("latitude"), info.get("longitude"))
-                                display_dist = format_distance(raw_dist)
+    hotels=[]
+    keyword=""
 
-                            hotels.append({
-                                "hotelName": info.get("hotelName"),
-                                "hotelImageUrl": info.get("hotelImageUrl"),
-                                "address1": info.get("address1", ""),
-                                "hotelMinCharge": info.get("hotelMinCharge"),
-                                "display_distance": display_dist, # エラーならここが空になるだけ
-                                "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_price": j_price,
-                                "jalan_url": j_url
-                            })
-            except Exception as e:
-                print(f"Main Error: {e}")
-    return render_template("index.html", hotels=hotels, keyword=keyword)
+    if request.method=="POST":
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+        keyword=request.form.get("keyword","").strip()
+
+        params={
+            "applicationId":RAKUTEN_APP_ID,
+            "affiliateId":RAKUTEN_AFFILIATE_ID,
+            "keyword":keyword,
+            "format":"json",
+            "hits":20
+        }
+
+        headers={
+            "User-Agent":"Mozilla/5.0"
+        }
+
+        res=requests.get(RAKUTEN_API_URL,params=params,headers=headers)
+
+        if res.status_code==200:
+
+            data=res.json()
+
+            if "hotels" in data:
+
+                base_coords=DESTINATIONS.get(keyword)
+
+                async def fetch_all():
+
+                    async with httpx.AsyncClient() as client:
+
+                        tasks=[]
+
+                        for h in data["hotels"]:
+
+                            name=h["hotel"][0]["hotelBasicInfo"]["hotelName"]
+
+                            tasks.append(get_jalan_data(client,name))
+
+                        return await asyncio.gather(*tasks)
+
+                try:
+                    jalan_results=asyncio.run(fetch_all())
+                except:
+                    jalan_results=[("---","")]*len(data["hotels"])
+
+                for i,h in enumerate(data["hotels"]):
+
+                    info=h["hotel"][0]["hotelBasicInfo"]
+
+                    j_price,j_url=jalan_results[i]
+
+                    lat=info.get("latitude")
+                    lng=info.get("longitude")
+
+                    display_dist=None
+
+                    if base_coords and lat and lng:
+
+                        raw=calculate_distance(
+                            base_coords["lat"],
+                            base_coords["lng"],
+                            float(lat),
+                            float(lng)
+                        )
+
+                        display_dist=format_distance(raw)
+
+                    hotels.append({
+
+                        "hotelName":info.get("hotelName"),
+                        "hotelImageUrl":info.get("hotelImageUrl"),
+                        "address1":info.get("address1"),
+                        "hotelMinCharge":info.get("hotelMinCharge"),
+                        "display_distance":display_dist,
+                        "target_url":info.get("hotelInformationUrl"),
+                        "jalan_price":j_price,
+                        "jalan_url":j_url
+
+                    })
+
+    return render_template("index.html",hotels=hotels,keyword=keyword)
+
+
+if __name__=="__main__":
+    app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
