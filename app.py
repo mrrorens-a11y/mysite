@@ -24,8 +24,8 @@ def format_distance(m):
         return ""
 
 def clean_name(name):
-    """名寄せ用のクレンジング"""
     if not name: return ""
+    # カッコ類と中身を排除
     name = re.sub(r'[（(［\[〈<＜【].*?[】＞>〉\]］)）]', '', name)
     return name.replace('　', ' ').strip()
 
@@ -37,13 +37,30 @@ def index():
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         if keyword:
-            # 共通のヘッダー（楽天403対策：User-Agentをしっかり設定）
+            # 楽天403回避用ヘッダー
             headers = {
-                "User-Agent": "TomarunApp/1.0 (https://mysite-l8l0.onrender.com/)",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
                 "Accept": "application/json"
             }
 
-            # 1. 楽天APIから一括取得 (1回)
+            # 1. じゃらんから一括取得 (名寄せ用)
+            j_list = []
+            if RECRUIT_API_KEY:
+                j_params = {
+                    "key": RECRUIT_API_KEY,
+                    "keyword": keyword,
+                    "format": "json",
+                    "count": 30 # 名寄せのヒット率を上げるため少し多めに
+                }
+                try:
+                    j_res = requests.get(JALAN_API_URL, params=j_params, timeout=10)
+                    if j_res.status_code == 200:
+                        j_data = j_res.json()
+                        j_list = j_data.get("results", {}).get("hotel", [])
+                except Exception as e:
+                    print(f"DEBUG: Jalan API Error: {e}")
+
+            # 2. 楽天から取得
             r_params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -53,28 +70,8 @@ def index():
                 "hits": 20
             }
             
-            # 2. じゃらんAPIから一括取得 (1回)
-            j_list = []
-            if RECRUIT_API_KEY:
-                j_params = {
-                    "key": RECRUIT_API_KEY,
-                    "keyword": keyword,
-                    "format": "json",
-                    "count": 20
-                }
-                try:
-                    j_res = requests.get(JALAN_API_URL, params=j_params, timeout=10)
-                    if j_res.status_code == 200:
-                        j_data = j_res.json()
-                        j_list = j_data.get("results", {}).get("hotel", [])
-                except Exception as e:
-                    print(f"Jalan API Error: {e}")
-
-            # 3. 楽天の結果をベースに、メモリ上でじゃらんと突合
             try:
                 r_res = requests.get(RAKUTEN_API_URL, params=r_params, headers=headers, timeout=10)
-                print(f"DEBUG: Rakuten Status: {r_res.status_code}")
-                
                 if r_res.status_code == 200:
                     r_data = r_res.json()
                     for h in r_data.get("hotels", []):
@@ -94,13 +91,13 @@ def index():
                             "jalan_url": ""
                         }
 
-                        # メモリ上のじゃらんリストから一番近いものを探す
+                        # メモリ内名寄せ
                         best_score = 0
                         for j_hotel in j_list:
                             j_name_clean = clean_name(j_hotel.get("hotelName", ""))
                             score = fuzz.token_sort_ratio(r_clean, j_name_clean)
                             
-                            if score > 60 and score > best_score:
+                            if score > 65 and score > best_score:
                                 best_score = score
                                 price = j_hotel.get("sampleRateFrom")
                                 item["jalan_price"] = f"¥{price}" if price else "---"
@@ -108,12 +105,14 @@ def index():
                         
                         hotels.append(item)
                 else:
-                    print(f"RAKUTEN ERROR: {r_res.status_code} {r_res.text}")
+                    print(f"DEBUG: Rakuten Status: {r_res.status_code}")
 
             except Exception as e:
-                print(f"System Error: {e}")
+                print(f"DEBUG: System Error: {e}")
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
+# Render(Gunicorn)環境でポート10000を確実に使う設定
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
