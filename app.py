@@ -1,25 +1,40 @@
 import os
 import requests
+import re  # 宿名クレンジング用に追加
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
 app = Flask(__name__)
 
-# 環境変数（RenderのDashboardで設定したもの）
+# 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
-# 楽天の新しいAPIエンドポイント
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
 def format_distance(m):
     """距離を500mや1.2kmのように表示"""
     if m is None: return ""
-    m = float(m)
+    try:
+        m = float(m)
+    except:
+        return ""
     return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
+
+def clean_hotel_name(name):
+    """
+    名寄せの精度を上げるためのクレンジング
+    例：「ホテル沖縄　＜沖縄県＞」 -> 「ホテル沖縄」
+    """
+    if not name: return ""
+    # カッコとその中身を削除（【】、<>、＜＞、（）、()）
+    name = re.sub(r'[（(［\[〈<＜【].*?[】＞>〉\]］)）]', '', name)
+    # 全角スペースを半角に、前後の空白を削除
+    name = name.replace('　', ' ').strip()
+    return name
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -41,9 +56,7 @@ def index():
 
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
-                "user-agent": "Mozilla/5.0",
-                "accept": "application/json"
+                "user-agent": "Mozilla/5.0"
             }
 
             try:
@@ -57,7 +70,9 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             r_name = info.get("hotelName", "")
                             
-                            # 基本データ構築
+                            # 検索用・比較用に名前を綺麗にする
+                            r_name_clean = clean_hotel_name(r_name)
+                            
                             item = {
                                 "hotelName": r_name,
                                 "hotelImageUrl": info.get("hotelImageUrl"),
@@ -74,32 +89,36 @@ def index():
                             if RECRUIT_API_KEY:
                                 j_params = {
                                     "key": RECRUIT_API_KEY,
-                                    "keyword": r_name,
+                                    "keyword": r_name_clean, # 綺麗な名前で検索
                                     "format": "json",
-                                    "count": 5
+                                    "count": 10 # 候補を少し多めに取得
                                 }
                                 try:
                                     j_res = requests.get(JALAN_API_URL, params=j_params, timeout=5)
                                     if j_res.status_code == 200:
                                         j_data = j_res.json()
                                         if "results" in j_data and "hotel" in j_data["results"]:
+                                            best_score = 0
                                             for j_hotel in j_data["results"]["hotel"]:
-                                                # 名前の類似度をチェック
-                                                score = fuzz.token_sort_ratio(r_name, j_hotel["hotelName"])
-                                                if score > 75: 
+                                                j_name_clean = clean_hotel_name(j_hotel["hotelName"])
+                                                # 文字の並び順に左右されない比較法を採用
+                                                score = fuzz.token_sort_ratio(r_name_clean, j_name_clean)
+                                                
+                                                # より高いスコアが見つかったら更新（最低60点以上に緩和）
+                                                if score > 60 and score > best_score:
+                                                    best_score = score
                                                     price = j_hotel.get("sampleRateFrom")
                                                     item["jalan_price"] = f"¥{price}" if price else "---"
                                                     item["jalan_url"] = j_hotel.get("urls", {}).get("pc")
-                                                    break
                                 except Exception as e:
-                                    print(f"Jalan sub-search error: {e}")
+                                    print(f"DEBUG: Jalan sub-search error: {e}")
                             
                             hotels.append(item)
                 else:
-                    print(f"RAKUTEN API ERROR: {res.status_code}, Body: {res.text}")
+                    print(f"DEBUG: RAKUTEN API ERROR: {res.status_code}")
 
             except Exception as e:
-                print("SYSTEM ERROR:", e)
+                print("DEBUG: SYSTEM ERROR:", e)
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
