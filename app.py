@@ -13,7 +13,7 @@ RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- 📍 目的地DB ---
+# --- 📍 目的地座標DB ---
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781},
@@ -27,34 +27,41 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792},
 }
 
-# --- 📏 距離計算 ---
-def calculate_haversine(lat1, lon1, lat2, lon2):
+# --- 📏 Haversine距離計算 (HTML表示用) ---
+def get_display_distance(lat1, lon1, lat2, lon2):
     try:
-        if not all([lat1, lon1, lat2, lon2]): return ""
-        R = 6371
+        if not all([lat1, lon1, lat2, lon2]): return None
+        R = 6371  # 地球の半径 (km)
         dlat = math.radians(float(lat2) - float(lat1))
         dlon = math.radians(float(lon2) - float(lon1))
         a = math.sin(dlat / 2)**2 + math.cos(math.radians(float(lat1))) * \
             math.cos(math.radians(float(lat2))) * math.sin(dlon / 2)**2
         c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
         dist_m = R * c * 1000
-        return f"{int(dist_m)}m" if dist_m < 1000 else f"{round(dist_m/1000, 2)}km"
-    except: return ""
+        
+        # 1km未満はm、1km以上はkm（小数点2桁）で表示
+        if dist_m < 1000:
+            return f"{int(dist_m)}m"
+        else:
+            return f"{round(dist_m/1000, 2)}km"
+    except:
+        return None
 
-# --- じゃらん料金取得 (同期版) ---
-def get_jalan_price(r_name):
-    if not RECRUIT_API_KEY: return "---", ""
-    params = {"key": RECRUIT_API_KEY, "keyword": r_name, "format": "json", "count": 1}
+# --- じゃらん料金取得 (同期) ---
+def get_jalan_data(hotel_name):
+    if not RECRUIT_API_KEY: return "---", None
+    params = {"key": RECRUIT_API_KEY, "keyword": hotel_name, "format": "json", "count": 1}
     try:
         res = requests.get(JALAN_API_URL, params=params, timeout=5)
         if res.status_code == 200:
             data = res.json()
             if "results" in data and "hotel" in data["results"]:
                 h = data["results"]["hotel"][0]
-                if fuzz.token_sort_ratio(r_name, h["hotelName"]) > 75:
-                    return f"¥{h.get('sampleRateFrom', '---')}", h.get("urls", {}).get("pc")
+                if fuzz.token_sort_ratio(hotel_name, h["hotelName"]) > 75:
+                    price = h.get("sampleRateFrom")
+                    return (f"¥{price}" if price else "---"), h.get("urls", {}).get("pc")
     except: pass
-    return "---", ""
+    return "---", None
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -68,27 +75,37 @@ def index():
                 res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
+                    # 目的地座標を取得
                     target = DESTINATIONS.get(keyword)
                     
-                    for h in data.get("hotels", []):
-                        info = h["hotel"][0]["hotelBasicInfo"]
-                        j_price, j_url = get_jalan_price(info.get("hotelName", ""))
+                    for h_item in data.get("hotels", []):
+                        info = h_item["hotel"][0]["hotelBasicInfo"]
+                        h_name = info.get("hotelName", "")
                         
-                        dist = ""
+                        # 距離計算の実行
+                        d_text = None
                         if target:
-                            dist = calculate_haversine(target['lat'], target['lng'], info.get('latitude'), info.get('longitude'))
-
+                            d_text = get_display_distance(
+                                target['lat'], target['lng'], 
+                                info.get('latitude'), info.get('longitude')
+                            )
+                        
+                        # じゃらん情報の取得
+                        j_price, j_url = get_jalan_data(h_name)
+                        
+                        # HTMLに渡すデータのパッキング
                         hotels.append({
-                            "hotelName": info.get("hotelName"),
+                            "hotelName": h_name,
                             "hotelImageUrl": info.get("hotelImageUrl"),
                             "hotelMinCharge": info.get("hotelMinCharge"),
-                            "display_distance": dist,
+                            "display_distance": d_text, # HTML側の {{ h.display_distance }} に流れる
                             "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                             "jalan_price": j_price,
                             "jalan_url": j_url
                         })
             except Exception as e:
-                print(f"Error: {e}")
+                print(f"Server Error: {e}")
+                
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
