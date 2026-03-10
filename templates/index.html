@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
     <title>tomarun | 宿泊比較</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@700&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --apple-blue: #0071e3;
@@ -17,7 +17,7 @@
         }
         body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--apple-bg); margin: 0 auto; max-width: 500px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
         
-        /* 🚨 ヘッダー：背景イラストと余白の調整 */
+        /* --- 🚨 ヘッダー：モノクロSVGイラストと余白の調整 --- */
         header { 
             background: rgba(255,255,255,0.85); 
             backdrop-filter: blur(20px); 
@@ -31,6 +31,56 @@
             overflow: hidden; /* イラストがはみ出ないように */
         }
         
+        /* 🚨 背景イラスト：モノクロSVG (飛行機と雲) */
+        
+        /* 雲1（左側） */
+        header::before {
+            content: '';
+            position: absolute;
+            /* 🚨 SVGコードで雲を描写 */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M85 50a15 15 0 1 0-10-27.4A20 20 0 1 0 50 15a20 20 0 1 0-25 7.6A15 15 0 1 0 15 50a15 15 0 1 0 10 27.4A20 20 0 1 0 50 85a20 20 0 1 0 25-7.6A15 15 0 1 0 85 50Z' fill='%231d1d1f'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 45px;
+            height: 45px;
+            opacity: 0.04; /* モノクロで薄く */
+            left: 8%;
+            top: 35%;
+            z-index: 1;
+        }
+        
+        /* 雲2（真ん中・下部） */
+        .logo-container::before {
+            content: '';
+            position: absolute;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M85 50a15 15 0 1 0-10-27.4A20 20 0 1 0 50 15a20 20 0 1 0-25 7.6A15 15 0 1 0 15 50a15 15 0 1 0 10 27.4A20 20 0 1 0 50 85a20 20 0 1 0 25-7.6A15 15 0 1 0 85 50Z' fill='%231d1d1f'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 35px;
+            height: 35px;
+            opacity: 0.03;
+            left: 45%;
+            bottom: -5px;
+            z-index: 1;
+        }
+        
+        /* 飛行機（右上に飛ぶ） */
+        .logo::after {
+            content: '';
+            position: absolute;
+            /* 🚨 SVGコードで飛行機を描写 */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M95 10a5 5 0 0 0-7 0L55 43l-30-7-5 5 25 10-10 10-10-3-5 5 12 8 8 12 5-5-3-10 10-10 10 25 5-5-7-30 33-33a5 5 0 0 0 0-7Z' fill='%231d1d1f'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-size: contain;
+            width: 40px;
+            height: 40px;
+            opacity: 0.05;
+            right: -35px; /* tomarunの右側 */
+            top: -12px; /* tomarunの右上 */
+            transform: rotate(-10deg); /* 右上に飛ばす傾き */
+            z-index: 1;
+        }
+
         /* ロゴのコンテナ */
         .logo-container {
             display: flex;
@@ -42,14 +92,15 @@
             z-index: 2; /* 文字をイラストの前に */
         }
         
-        /* 🚨 ロゴ：手書き風 & フォントを太く (fontWeight: 700) */
+        /* 🚨 ロゴ：手書き風 & フォントを元の太さ (fontWeight: 500) に戻した */
         .logo { 
             font-family: 'Kiwi Maru', serif; 
             font-size: 2.6rem; 
-            font-weight: 700; /* 🚨 太くした */
+            font-weight: 500; /* 🚨 元の太さに戻した */
             margin: 0; 
             color: var(--text-main);
             line-height: 1;
+            position: relative; /* 飛行機の基準 */
         }
         
         /* サブタイトル：普通のフォント 黒字 小さめ */
@@ -59,46 +110,6 @@
             color: var(--text-main);
             margin-top: 2px; /* ロゴとの間隔を詰めた */
             letter-spacing: 0.05em;
-        }
-
-        /* --- 🚨 CSS背景イラスト（飛行機と雲） --- */
-        
-        /* 雲1（左側） */
-        header::before {
-            content: '☁️';
-            position: absolute;
-            font-size: 30px;
-            opacity: 0.15; /* 白黒の影絵風にするため薄く */
-            color: #000;
-            left: 10%;
-            top: 40%;
-            z-index: 1;
-        }
-        
-        /* 雲2（真ん中） */
-        .logo-container::after {
-            content: '☁️';
-            position: absolute;
-            font-size: 24px;
-            opacity: 0.1;
-            color: #000;
-            left: 50%;
-            transform: translateX(-50%);
-            bottom: -5px;
-            z-index: 1;
-        }
-        
-        /* 飛行機（右上に飛ぶ） */
-        .logo::after {
-            content: '✈️';
-            position: absolute;
-            font-size: 28px;
-            opacity: 0.2;
-            color: #000;
-            right: -35px; /* tomarunの右側 */
-            top: -10px; /* tomarunの右上 */
-            transform: rotate(-15deg); /* 右上に飛ばす傾き */
-            z-index: 1;
         }
 
         /* 検索セクション */
