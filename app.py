@@ -17,7 +17,7 @@ RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# 沖縄スポット
+# --- 📍 あなたが地道に集める価値のある目的地DB ---
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781},
@@ -31,158 +31,84 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792},
 }
 
-# 距離表示
-def format_distance(m):
-    if m is None:
-        return None
-    m = float(m)
-    if m < 1000:
-        return f"{int(m)}m"
-    else:
-        return f"{round(m/1000,2)}km"
-
-# 距離計算
-def calculate_distance(lat1, lon1, lat2, lon2):
-    if not lat2 or not lon2:
-        return None
-
-    R = 6371000
-    rad_lat1 = math.radians(lat1)
-    rad_lat2 = math.radians(lat2)
-    dlat = rad_lat2 - rad_lat1
-    dlon = math.radians(lon2 - lon1)
-
-    a = math.sin(dlat/2)**2 + math.cos(rad_lat1)*math.cos(rad_lat2)*math.sin(dlon/2)**2
-    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
-
-    return R * c
-
-
-# じゃらんAPI
-async def get_jalan_data(client, name):
-
-    if not RECRUIT_API_KEY:
-        return "---",""
-
-    params = {
-        "key": RECRUIT_API_KEY,
-        "keyword": name,
-        "format": "json",
-        "count": 3
-    }
-
+# --- 📏 精密距離計算 (Hotels.comスタイル) ---
+def get_distance_str(lat1, lon1, lat2, lon2):
     try:
-
-        res = await client.get(JALAN_API_URL, params=params)
-
-        if res.status_code == 200:
-
-            data = res.json()
-
-            if "results" in data and "hotel" in data["results"]:
-
-                for hotel in data["results"]["hotel"]:
-
-                    if fuzz.token_sort_ratio(name, hotel["hotelName"]) > 75:
-
-                        price = hotel.get("sampleRateFrom")
-
-                        return f"¥{price}" if price else "---", hotel["urls"]["pc"]
-
+        # すべて数値に変換（ここが失敗の分岐点）
+        p1_lat, p1_lon = float(lat1), float(lon1)
+        p2_lat, p2_lon = float(lat2), float(lon2)
+        
+        R = 6371000 # 地球の半径(m)
+        d_lat = math.radians(p2_lat - p1_lat)
+        d_lon = math.radians(p2_lon - p1_lon)
+        a = math.sin(d_lat/2)**2 + math.cos(math.radians(p1_lat)) * math.cos(math.radians(p2_lat)) * math.sin(d_lon/2)**2
+        dist_m = R * (2 * math.atan2(math.sqrt(a), math.sqrt(1-a)))
+        
+        if dist_m < 1000:
+            return f"{int(dist_m)}m"
+        else:
+            return f"{round(dist_m/1000, 2)}km"
     except:
-        pass
+        return None
 
-    return "---",""
+async def get_jalan_data(client, r_name):
+    if not RECRUIT_API_KEY: return "---", ""
+    try:
+        j_params = {"key": RECRUIT_API_KEY, "keyword": r_name, "format": "json", "count": 1}
+        res = await client.get(JALAN_API_URL, params=j_params, timeout=5.0)
+        if res.status_code == 200:
+            j_data = res.json()
+            if "results" in j_data and "hotel" in j_data["results"]:
+                h = j_data["results"]["hotel"][0]
+                if fuzz.token_sort_ratio(r_name, h["hotelName"]) > 75:
+                    return (f"¥{h.get('sampleRateFrom')}" if h.get('sampleRateFrom') else "---"), h.get("urls", {}).get("pc")
+    except: pass
+    return "---", ""
 
-
-@app.route("/", methods=["GET","POST"])
+@app.route("/", methods=["GET", "POST"])
 def index():
+    hotels = []
+    keyword = ""
+    if request.method == "POST":
+        keyword = request.form.get("keyword", "").strip()
+        if keyword:
+            params = {
+                "applicationId": RAKUTEN_APP_ID, "format": "json",
+                "keyword": keyword, "hits": 15
+            }
+            res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
+            if res.status_code == 200:
+                data = res.json()
+                if "hotels" in data:
+                    # キーワードがDBにあれば座標をセット
+                    base = DESTINATIONS.get(keyword)
+                    
+                    async def fetch_jalan():
+                        async with httpx.AsyncClient() as client:
+                            tasks = [get_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
+                            return await asyncio.gather(*tasks)
+                    
+                    j_results = asyncio.run(fetch_jalan())
 
-    hotels=[]
-    keyword=""
+                    for idx, h in enumerate(data["hotels"]):
+                        info = h["hotel"][0]["hotelBasicInfo"]
+                        j_price, j_url = j_results[idx]
+                        
+                        # 距離計算の実行
+                        d_str = None
+                        if base:
+                            d_str = get_distance_str(base['lat'], base['lng'], info.get('latitude'), info.get('longitude'))
 
-    if request.method=="POST":
+                        hotels.append({
+                            "hotelName": info.get("hotelName"),
+                            "hotelImageUrl": info.get("hotelImageUrl"),
+                            "hotelMinCharge": info.get("hotelMinCharge"),
+                            "display_distance": d_str,
+                            "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                            "jalan_price": j_price,
+                            "jalan_url": j_url
+                        })
+    return render_template("index.html", hotels=hotels, keyword=keyword)
 
-        keyword=request.form.get("keyword","").strip()
-
-        params={
-            "applicationId":RAKUTEN_APP_ID,
-            "affiliateId":RAKUTEN_AFFILIATE_ID,
-            "keyword":keyword,
-            "format":"json",
-            "hits":20
-        }
-
-        headers={
-            "User-Agent":"Mozilla/5.0"
-        }
-
-        res=requests.get(RAKUTEN_API_URL,params=params,headers=headers)
-
-        if res.status_code==200:
-
-            data=res.json()
-
-            if "hotels" in data:
-
-                base_coords=DESTINATIONS.get(keyword)
-
-                async def fetch_all():
-
-                    async with httpx.AsyncClient() as client:
-
-                        tasks=[]
-
-                        for h in data["hotels"]:
-
-                            name=h["hotel"][0]["hotelBasicInfo"]["hotelName"]
-
-                            tasks.append(get_jalan_data(client,name))
-
-                        return await asyncio.gather(*tasks)
-
-                try:
-                    jalan_results=asyncio.run(fetch_all())
-                except:
-                    jalan_results=[("---","")]*len(data["hotels"])
-
-                for i,h in enumerate(data["hotels"]):
-
-                    info=h["hotel"][0]["hotelBasicInfo"]
-
-                    j_price,j_url=jalan_results[i]
-
-                    lat=info.get("latitude")
-                    lng=info.get("longitude")
-
-                    display_dist=None
-
-                    if base_coords and lat and lng:
-
-                        raw=calculate_distance(
-                            base_coords["lat"],
-                            base_coords["lng"],
-                            float(lat),
-                            float(lng)
-                        )
-
-                        display_dist=format_distance(raw)
-
-                    hotels.append({
-
-                        "hotelName":info.get("hotelName"),
-                        "hotelImageUrl":info.get("hotelImageUrl"),
-                        "address1":info.get("address1"),
-                        "hotelMinCharge":info.get("hotelMinCharge"),
-                        "display_distance":display_dist,
-                        "target_url":info.get("hotelInformationUrl"),
-                        "jalan_price":j_price,
-                        "jalan_url":j_url
-
-                    })
-
-    return render_template("index.html",hotels=hotels,keyword=keyword)
-
-
-if __name__=="__main__":
-    app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
