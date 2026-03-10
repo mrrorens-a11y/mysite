@@ -8,17 +8,14 @@ from rapidfuzz import fuzz
 
 app = Flask(__name__)
 
-# --- 環境変数 ---
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
-# API
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- 📍 目的地DB ---
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767, "search_word": "恩納村"},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781, "search_word": "本部町"},
@@ -32,7 +29,7 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792, "search_word": "那覇"}
 }
 
-# --- 距離計算 ---
+
 def haversine(lat1, lon1, lat2, lon2):
 
     R = 6371
@@ -63,11 +60,10 @@ def format_distance(m):
     return f"{round(m/1000,1)}km"
 
 
-# --- じゃらん料金取得 ---
 async def get_jalan_data(client, r_name):
 
     if not RECRUIT_API_KEY:
-        return "---", ""
+        return None, ""
 
     params = {
         "key": RECRUIT_API_KEY,
@@ -98,13 +94,13 @@ async def get_jalan_data(client, r_name):
                         price = j_hotel.get("sampleRateFrom")
                         url = j_hotel.get("urls", {}).get("pc")
 
-                        return f"¥{price}" if price else "---", url
+                        return price, url
 
     except Exception as e:
 
         print("Jalan Error", e)
 
-    return "---", ""
+    return None, ""
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -119,7 +115,6 @@ def index():
 
         if keyword:
 
-            # --- DESTINATION判定 ---
             if keyword in DESTINATIONS:
 
                 dest = DESTINATIONS[keyword]
@@ -135,7 +130,6 @@ def index():
                 dest_lng = None
                 rakuten_keyword = keyword
 
-            # --- 楽天検索 ---
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -145,16 +139,7 @@ def index():
                 "hits": 15
             }
 
-            headers = {
-                "user-agent": "Mozilla/5.0"
-            }
-
-            res = requests.get(
-                RAKUTEN_API_URL,
-                params=params,
-                headers=headers,
-                timeout=10
-            )
+            res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
 
             if res.status_code == 200:
 
@@ -182,6 +167,8 @@ def index():
 
                         info = h["hotel"][0]["hotelBasicInfo"]
 
+                        rakuten_price = info.get("hotelMinCharge")
+
                         hotel_lat = info.get("latitude")
                         hotel_lng = info.get("longitude")
 
@@ -198,7 +185,24 @@ def index():
 
                             distance = distance_km * 1000
 
-                        j_price, j_url = jalan_results[idx]
+                        jalan_price, jalan_url = jalan_results[idx]
+
+                        # -------- トリバゴロジック --------
+
+                        prices = []
+
+                        if rakuten_price:
+                            prices.append(("楽天", rakuten_price, info.get("affiliateUrl") or info.get("hotelInformationUrl")))
+
+                        if jalan_price:
+                            prices.append(("じゃらん", jalan_price, jalan_url))
+
+                        best_site = None
+                        best_price = None
+                        best_link = None
+
+                        if prices:
+                            best_site, best_price, best_link = min(prices, key=lambda x: x[1])
 
                         hotels.append({
 
@@ -206,15 +210,15 @@ def index():
                             "hotelImageUrl": info.get("hotelImageUrl"),
                             "address1": info.get("address1", ""),
                             "address2": info.get("address2", ""),
-                            "hotelMinCharge": info.get("hotelMinCharge"),
+                            "rakuten_price": rakuten_price,
+                            "jalan_price": jalan_price,
+                            "best_site": best_site,
+                            "best_price": best_price,
+                            "best_link": best_link,
                             "display_distance": format_distance(distance),
-                            "distance_raw": distance if distance else 999999,
-                            "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                            "jalan_price": j_price,
-                            "jalan_url": j_url
+                            "distance_raw": distance if distance else 999999
                         })
 
-                    # --- 距離順 ---
                     hotels.sort(key=lambda x: x["distance_raw"])
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
