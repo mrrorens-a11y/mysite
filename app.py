@@ -8,14 +8,15 @@ from rapidfuzz import fuzz
 
 app = Flask(__name__)
 
+# --- 環境変数 (楽天API用) ---
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
+# --- 📍 目的地DB (あなたが指定した10選) ---
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767, "search_word": "恩納村"},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781, "search_word": "本部町"},
@@ -29,200 +30,88 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792, "search_word": "那覇"}
 }
 
+# --- 🏨 自作宿DB (各エリアに数件ずつ配置) ---
+MY_HOTEL_DB = [
+    {"name": "ホテル美ら海フロント", "lat": 26.6945, "lng": 127.8785, "price": 12000, "url": "https://travel.rakuten.co.jp/"},
+    {"name": "那覇エアポートイン", "lat": 26.2070, "lng": 127.6470, "price": 7500, "url": "https://travel.rakuten.co.jp/"},
+    {"name": "国際通りセントラルホテル", "lat": 26.2160, "lng": 127.6860, "price": 9800, "url": "https://travel.rakuten.co.jp/"},
+    {"name": "アメリカンビレッジ・リゾート", "lat": 26.3170, "lng": 127.7580, "price": 15000, "url": "https://travel.rakuten.co.jp/"},
+    {"name": "恩納サンセットビーチ宿", "lat": 26.5060, "lng": 127.8770, "price": 22000, "url": "https://travel.rakuten.co.jp/"}
+]
 
+# --- 📏 距離計算 ---
 def haversine(lat1, lon1, lat2, lon2):
-
-    R = 6371
-
-    lat1, lon1, lat2, lon2 = map(
-        math.radians,
-        [lat1, lon1, lat2, lon2]
-    )
-
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-
-    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-
-    c = 2 * math.asin(math.sqrt(a))
-
-    return R * c
-
-
-def format_distance(m):
-
-    if not m:
-        return ""
-
-    if m < 1000:
-        return f"{int(m)}m"
-
-    return f"{round(m/1000,1)}km"
-
-
-async def get_jalan_data(client, r_name):
-
-    if not RECRUIT_API_KEY:
-        return None, ""
-
-    params = {
-        "key": RECRUIT_API_KEY,
-        "keyword": r_name,
-        "format": "json",
-        "count": 5
-    }
-
     try:
+        lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
+        dlat, dlon = lat2 - lat1, lon2 - lon1
+        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
+        return 6371 * 2 * math.asin(math.sqrt(a))
+    except: return None
 
-        res = await client.get(JALAN_API_URL, params=params, timeout=5)
-
-        if res.status_code == 200:
-
-            data = res.json()
-
-            if "results" in data and "hotel" in data["results"]:
-
-                for j_hotel in data["results"]["hotel"]:
-
-                    score = fuzz.token_sort_ratio(
-                        r_name,
-                        j_hotel["hotelName"]
-                    )
-
-                    if score > 75:
-
-                        price = j_hotel.get("sampleRateFrom")
-                        url = j_hotel.get("urls", {}).get("pc")
-
-                        return price, url
-
-    except Exception as e:
-
-        print("Jalan Error", e)
-
-    return None, ""
-
+def format_distance(km):
+    if km is None: return ""
+    m = km * 1000
+    return f"{int(m)}m" if m < 1000 else f"{round(km, 2)}km"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-
     hotels = []
     keyword = ""
-
     if request.method == "POST":
-
         keyword = request.form.get("keyword", "").strip()
-
         if keyword:
-
-            if keyword in DESTINATIONS:
-
-                dest = DESTINATIONS[keyword]
-
-                dest_lat = dest["lat"]
-                dest_lng = dest["lng"]
-
-                rakuten_keyword = dest["search_word"]
-
-            else:
-
-                dest_lat = None
-                dest_lng = None
-                rakuten_keyword = keyword
-
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
-                "affiliateId": RAKUTEN_AFFILIATE_ID,
-                "keyword": rakuten_keyword,
-                "format": "json",
-                "hits": 15
-            }
-
-            res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
-
-            if res.status_code == 200:
-
-                data = res.json()
-
-                if "hotels" in data:
-
-                    async def fetch_all_jalan():
-
-                        async with httpx.AsyncClient() as client:
-
-                            tasks = [
-                                get_jalan_data(
-                                    client,
-                                    h["hotel"][0]["hotelBasicInfo"]["hotelName"]
-                                )
-                                for h in data["hotels"]
-                            ]
-
-                            return await asyncio.gather(*tasks)
-
-                    jalan_results = asyncio.run(fetch_all_jalan())
-
-                    for idx, h in enumerate(data["hotels"]):
-
-                        info = h["hotel"][0]["hotelBasicInfo"]
-
-                        rakuten_price = info.get("hotelMinCharge")
-
-                        hotel_lat = info.get("latitude")
-                        hotel_lng = info.get("longitude")
-
-                        distance = None
-
-                        if dest_lat and hotel_lat:
-
-                            distance_km = haversine(
-                                dest_lat,
-                                dest_lng,
-                                float(hotel_lat),
-                                float(hotel_lng)
-                            )
-
-                            distance = distance_km * 1000
-
-                        jalan_price, jalan_url = jalan_results[idx]
-
-                        # -------- トリバゴロジック --------
-
-                        prices = []
-
-                        if rakuten_price:
-                            prices.append(("楽天", rakuten_price, info.get("affiliateUrl") or info.get("hotelInformationUrl")))
-
-                        if jalan_price:
-                            prices.append(("じゃらん", jalan_price, jalan_url))
-
-                        best_site = None
-                        best_price = None
-                        best_link = None
-
-                        if prices:
-                            best_site, best_price, best_link = min(prices, key=lambda x: x[1])
-
+            target = DESTINATIONS.get(keyword)
+            
+            # --- 1. 自作DBから宿を抽出 ---
+            if target:
+                for h in MY_HOTEL_DB:
+                    dist_km = haversine(target["lat"], target["lng"], h["lat"], h["lng"])
+                    # 目的地から30km以内の宿を表示（全県表示を防ぐため）
+                    if dist_km and dist_km < 30:
                         hotels.append({
-
-                            "hotelName": info.get("hotelName"),
-                            "hotelImageUrl": info.get("hotelImageUrl"),
-                            "address1": info.get("address1", ""),
-                            "address2": info.get("address2", ""),
-                            "rakuten_price": rakuten_price,
-                            "jalan_price": jalan_price,
-                            "best_site": best_site,
-                            "best_price": best_price,
-                            "best_link": best_link,
-                            "display_distance": format_distance(distance),
-                            "distance_raw": distance if distance else 999999
+                            "hotelName": h["name"],
+                            "hotelImageUrl": "https://picsum.photos/seed/" + h["name"] + "/600/400",
+                            "hotelMinCharge": h["price"],
+                            "display_distance": format_distance(dist_km),
+                            "target_url": h["url"],
+                            "jalan_price": "---",
+                            "raw_dist": dist_km
                         })
 
-                    hotels.sort(key=lambda x: x["distance_raw"])
+            # --- 2. 楽天API (動けばラッキー、動かなくても自作DBが出る) ---
+            params = {
+                "applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY,
+                "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json",
+                "keyword": target["search_word"] if target else keyword, "hits": 10
+            }
+            headers = {"referer": "https://mysite-l8l0.onrender.com/", "user-agent": "Mozilla/5.0"}
+            
+            try:
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=5)
+                if res.status_code == 200:
+                    data = res.json()
+                    for h_item in data.get("hotels", []):
+                        info = h_item["hotel"][0]["hotelBasicInfo"]
+                        dist_km = None
+                        if target:
+                            dist_km = haversine(target["lat"], target["lng"], info.get("latitude"), info.get("longitude"))
+                        
+                        hotels.append({
+                            "hotelName": info.get("hotelName"),
+                            "hotelImageUrl": info.get("hotelImageUrl"),
+                            "hotelMinCharge": info.get("hotelMinCharge"),
+                            "display_distance": format_distance(dist_km),
+                            "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                            "jalan_price": "---",
+                            "raw_dist": dist_km if dist_km is not None else 999
+                        })
+            except: pass
+
+            # --- 3. 全体を距離順に並び替え ---
+            if target:
+                hotels.sort(key=lambda x: x["raw_dist"])
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
