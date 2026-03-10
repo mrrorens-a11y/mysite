@@ -18,9 +18,7 @@ RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelS
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
 def format_distance(m):
-    """
-    距離を1000m未満は'm'、それ以上は'km'で分かりやすく表示
-    """
+    """ 距離を分かりやすく表示（1000m以上はkm） """
     if m is None or m == "": return ""
     try:
         m = float(m)
@@ -29,9 +27,7 @@ def format_distance(m):
         return ""
 
 async def get_jalan_data(client, r_name):
-    """
-    じゃらんAPIを非同期で叩き、楽天のホテル名と照合して料金を返す
-    """
+    """ じゃらんAPIを非同期で叩き、楽天のホテル名と照合して料金を返す """
     if not RECRUIT_API_KEY:
         return "---", ""
     
@@ -43,13 +39,12 @@ async def get_jalan_data(client, r_name):
     }
     
     try:
-        # タイムアウトを5秒に設定し、レスポンスを待つ
         res = await client.get(JALAN_API_URL, params=j_params, timeout=5.0)
         if res.status_code == 200:
             j_data = res.json()
             if "results" in j_data and "hotel" in j_data["results"]:
                 for j_hotel in j_data["results"]["hotel"]:
-                    # ホテル名の類似度をチェック（75%以上の一致で同一とみなす）
+                    # 類似度75%以上の一致を確認
                     score = fuzz.token_sort_ratio(r_name, j_hotel["hotelName"])
                     if score > 75:
                         price = j_hotel.get("sampleRateFrom")
@@ -68,7 +63,7 @@ def index():
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         if keyword:
-            # 1. 楽天APIリクエスト（ベースとなるホテルリストを取得）
+            # 1. 楽天APIリクエスト
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -77,10 +72,10 @@ def index():
                 "keyword": keyword,
                 "hits": 15
             }
-            # Render等で動かす際のReferer制限対策（必要に応じて）
+            # リファラ設定（Render環境用）
             headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "user-agent": "Mozilla/5.0"
+                "Referer": "https://mysite-l8l0.onrender.com/",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
             }
 
             try:
@@ -89,20 +84,17 @@ def index():
                     data = res.json()
                     
                     if "hotels" in data:
-                        # --- 【非同期処理の実行】 ---
+                        # 非同期でじゃらんの価格を一斉取得
                         async def fetch_all_jalan():
                             async with httpx.AsyncClient() as client:
-                                # 全ホテルのじゃらん検索を「一斉に」開始
                                 tasks = [
                                     get_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) 
                                     for h in data["hotels"]
                                 ]
                                 return await asyncio.gather(*tasks)
 
-                        # 非同期ループを回して結果を取得
                         jalan_results = asyncio.run(fetch_all_jalan())
 
-                        # 楽天データとじゃらんの結果を統合
                         for idx, h in enumerate(data["hotels"]):
                             info = h["hotel"][0]["hotelBasicInfo"]
                             j_price, j_url = jalan_results[idx]
@@ -119,12 +111,13 @@ def index():
                                 "jalan_url": j_url
                             }
                             hotels.append(item)
+                else:
+                    print(f"Rakuten API Error: {res.status_code} - {res.text}")
             except Exception as e:
                 print(f"Rakuten API Error: {e}")
     
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # Render等の環境に合わせてポート番号を取得
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
