@@ -1,6 +1,6 @@
 import os
 import asyncio
-import httpx # 非同期通信用のライブラリ
+import httpx
 import requests
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
@@ -18,13 +18,14 @@ JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
 def format_distance(m):
     if m is None: return ""
-    m = float(m)
-    return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
+    try:
+        m = float(m)
+        return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
+    except: return ""
 
-# --- 【爆速化の肝】じゃらんAPIを非同期で叩く関数 ---
+# --- じゃらん名寄せ検索（爆速・非同期版） ---
 async def fetch_jalan_data(client, r_name):
-    if not RECRUIT_API_KEY:
-        return "---", ""
+    if not RECRUIT_API_KEY: return "---", ""
     j_params = {
         "key": RECRUIT_API_KEY,
         "keyword": r_name,
@@ -32,8 +33,8 @@ async def fetch_jalan_data(client, r_name):
         "count": 5
     }
     try:
-        # タイムアウトを短めに設定して全体の停滞を防ぐ
-        res = await client.get(JALAN_API_URL, params=j_params, timeout=4.0)
+        # タイムアウトを短めに設定
+        res = await client.get(JALAN_API_URL, params=j_params, timeout=5.0)
         if res.status_code == 200:
             j_data = res.json()
             if "results" in j_data and "hotel" in j_data["results"]:
@@ -43,8 +44,7 @@ async def fetch_jalan_data(client, r_name):
                         price = j_hotel.get("sampleRateFrom")
                         url = j_hotel.get("urls", {}).get("pc")
                         return (f"¥{price}" if price else "---"), (url or "")
-    except:
-        pass
+    except: pass
     return "---", ""
 
 @app.route("/", methods=["GET", "POST"])
@@ -56,6 +56,7 @@ def index():
         keyword = request.form.get("keyword", "").strip()
 
         if keyword:
+            # 1. 楽天APIリクエスト
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -64,29 +65,33 @@ def index():
                 "keyword": keyword,
                 "hits": 15
             }
+
+            # 🚨 ここをChatGPT版と完全に一致させました（403対策）
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
                 "user-agent": "Mozilla/5.0",
                 "accept": "application/json"
             }
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                print(f"DEBUG: Rakuten Status: {res.status_code}")
+
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
-                        # --- 【爆速化の実行】一斉に検索を開始 ---
+                        # 2. じゃらん一斉検索（ここで時間を短縮）
                         async def get_all_prices():
                             async with httpx.AsyncClient() as client:
                                 tasks = [fetch_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
                                 return await asyncio.gather(*tasks)
                         
-                        # 非同期処理の結果をまとめて受け取る
                         jalan_results = asyncio.run(get_all_prices())
 
                         for idx, h in enumerate(data["hotels"]):
                             info = h["hotel"][0]["hotelBasicInfo"]
-                            j_price, j_url = jalan_results[idx] # まとめて取得した結果を割り当てる
+                            j_price, j_url = jalan_results[idx]
 
                             hotels.append({
                                 "hotelName": info.get("hotelName"),
@@ -100,7 +105,7 @@ def index():
                                 "jalan_url": j_url
                             })
                 else:
-                    print(f"RAKUTEN ERROR: {res.status_code}")
+                    print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
