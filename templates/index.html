@@ -17,7 +17,6 @@
         }
         body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--apple-bg); margin: 0 auto; max-width: 500px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
         
-        /* 🚨 ヘッダー：モノクロイラストと余白の調整 */
         header { 
             background: rgba(255,255,255,0.85); 
             backdrop-filter: blur(20px); 
@@ -31,22 +30,22 @@
             overflow: hidden;
         }
         
-        /* 🚗 背景イラスト：車のモノクロSVG（左下） */
+        /* 🚙 背景：ジープの横向きシルエット（左下） */
         header::before {
             content: '';
             position: absolute;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M90 55l-5-15c-1-3-4-5-7-5H22c-3 0-6 2-7 5l-5 15v20h5c0 3 2 5 5 5s5-2 5-5h50c0 3 2 5 5 5s5-2 5-5h5V55zM25 45h50l3 10H22l3-10z' fill='%231d1d1f'/%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M92 65H85V58c0-2-1-3-3-3h-7l-8-15c-1-2-3-3-5-3H35c-2 0-4 1-5 3l-8 15h-7c-2 0-3 1-3 3v10c0 2 1 3 3 3h5c0 5 4 9 9 9s9-4 9-9h30c0 5 4 9 9 9s9-4 9-9h5c2 0 3-1 3-3V68c0-2-1-3-3-3zM28 80c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zm48 0c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zM33 42h28l7 13H26l7-13z' fill='%231d1d1f'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-size: contain;
-            width: 35px;
-            height: 35px;
+            width: 45px;
+            height: 45px;
             opacity: 0.05;
             left: 5%;
             bottom: 5px;
             z-index: 1;
         }
         
-        /* ✈️ 背景イラスト：飛行機のモノクロSVG（右上） */
+        /* ✈️ 背景：飛行機のシルエット（右上） */
         .logo::after {
             content: '';
             position: absolute;
@@ -90,13 +89,11 @@
             letter-spacing: 0.05em;
         }
 
-        /* 検索セクション */
         .search-section { padding: 30px 20px 20px 20px; text-align: center; }
         .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #d2d2d7; }
         input { flex: 1; padding: 12px 16px; border: none; font-size: 16px; outline: none; background: transparent; }
         button#search-btn { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; }
 
-        /* ホテルカード */
         .hotel-container { padding: 15px; }
         .hotel-card { background: white; border-radius: 24px; margin-bottom: 30px; overflow: hidden; box-shadow: var(--card-shadow); display: flex; flex-direction: column; }
         .hotel-img { width: 100%; height: 260px; object-fit: cover; }
