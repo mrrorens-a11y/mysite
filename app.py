@@ -14,11 +14,11 @@ RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
-# API URL
+# 成功実績のあるエンドポイント
 RAKUTEN_SEARCH_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- 📍 目的地座標DB ---
+# 目的地DB
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781},
@@ -32,7 +32,6 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792}
 }
 
-# 距離計算
 def haversine(lat1, lon1, lat2, lon2):
     try:
         lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
@@ -44,7 +43,6 @@ def format_distance(km):
     m = km * 1000
     return f"{int(m)}m" if m < 1000 else f"{round(km, 2)}km"
 
-# じゃらん価格取得
 async def get_jalan_price(client, hotel_name):
     if not RECRUIT_API_KEY: return "---", ""
     try:
@@ -64,12 +62,14 @@ async def get_jalan_price(client, hotel_name):
 def index():
     hotels = []
     keyword = ""
+    my_url = "https://mysite-l8l0.onrender.com/" # あなたのサイトのURL
+    
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         target = DESTINATIONS.get(keyword)
 
         if target:
-            # --- 楽天APIパラメータ ---
+            # --- 🚨 修正：paramsの中に直接リファラを入れる ---
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -78,19 +78,20 @@ def index():
                 "latitude": target["lat"],
                 "longitude": target["lng"],
                 "searchRadius": 3,
-                "hits": 20
+                "hits": 20,
+                "carrier": 0, # PC/スマホ両対応を指定
+                "referrer": my_url # URLパラメータとして追加
             }
             
-            # --- 🚨 修正：リファラを確実に送る設定 ---
+            # ヘッダーにも念のため追加
             headers = {
-                "Referer": "https://mysite-l8l0.onrender.com/",
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
+                "Referer": my_url,
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)"
             }
             
             try:
-                # セッションを使ってリクエストを安定させる
-                with requests.Session() as session:
-                    res = session.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=10)
+                # タイムアウトを少し長めにして確実に取得
+                res = requests.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=15)
                 
                 if res.status_code == 200:
                     data = res.json()
