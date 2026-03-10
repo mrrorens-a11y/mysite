@@ -8,17 +8,17 @@ from rapidfuzz import fuzz
 
 app = Flask(__name__)
 
-# --- 🚨 楽天・リクルートAPI 3点セット＋1 ---
+# --- 環境変数 ---
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
 RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
-# 周辺検索用のエンドポイント
+# API URL
 RAKUTEN_SEARCH_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- 📍 目的地座標DB (沖縄主要スポット) ---
+# --- 📍 目的地座標DB ---
 DESTINATIONS = {
     "恩納村": {"lat": 26.5050, "lng": 127.8767},
     "美ら海水族館": {"lat": 26.6943, "lng": 127.8781},
@@ -32,23 +32,19 @@ DESTINATIONS = {
     "那覇駅": {"lat": 26.2125, "lng": 127.6792}
 }
 
-# --- 📏 距離計算 (Haversine法) ---
+# 距離計算
 def haversine(lat1, lon1, lat2, lon2):
     try:
         lat1, lon1, lat2, lon2 = map(math.radians, [float(lat1), float(lon1), float(lat2), float(lon2)])
-        dlat, dlon = lat2 - lat1, lon2 - lon1
-        a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlon/2)**2
-        return 6371 * 2 * math.asin(math.sqrt(a))
+        return 6371 * 2 * math.asin(math.sqrt(math.sin((lat2-lat1)/2)**2 + math.cos(lat1)*math.cos(lat2)*math.sin((lon2-lon1)/2)**2))
     except: return None
 
 def format_distance(km):
     if km is None: return ""
     m = km * 1000
-    if m < 1000:
-        return f"{int(m)}m"
-    return f"{round(km, 2)}km"
+    return f"{int(m)}m" if m < 1000 else f"{round(km, 2)}km"
 
-# --- 🏨 じゃらん価格取得 (非同期) ---
+# じゃらん価格取得
 async def get_jalan_price(client, hotel_name):
     if not RECRUIT_API_KEY: return "---", ""
     try:
@@ -73,7 +69,7 @@ def index():
         target = DESTINATIONS.get(keyword)
 
         if target:
-            # --- 1. 楽天API: 座標指定で周辺宿を検索 ---
+            # --- 楽天APIパラメータ ---
             params = {
                 "applicationId": RAKUTEN_APP_ID,
                 "accessKey": RAKUTEN_ACCESS_KEY,
@@ -81,21 +77,25 @@ def index():
                 "format": "json",
                 "latitude": target["lat"],
                 "longitude": target["lng"],
-                "searchRadius": 3,  # 半径3km以内
+                "searchRadius": 3,
                 "hits": 20
             }
+            
+            # --- 🚨 修正：リファラを確実に送る設定 ---
             headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "user-agent": "Mozilla/5.0"
+                "Referer": "https://mysite-l8l0.onrender.com/",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
             }
             
             try:
-                res = requests.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=10)
+                # セッションを使ってリクエストを安定させる
+                with requests.Session() as session:
+                    res = session.get(RAKUTEN_SEARCH_URL, params=params, headers=headers, timeout=10)
+                
                 if res.status_code == 200:
                     data = res.json()
                     raw_list = data.get("hotels", [])
                     
-                    # じゃらんの価格も並行して取得
                     async def fetch_prices():
                         async with httpx.AsyncClient() as client:
                             tasks = [get_jalan_price(client, h["hotel"][0]["hotelBasicInfo"]["hotelName"]) for h in raw_list]
@@ -106,7 +106,6 @@ def index():
                     for idx, h_item in enumerate(raw_list):
                         info = h_item["hotel"][0]["hotelBasicInfo"]
                         j_price, j_url = jalan_results[idx]
-                        
                         dist_km = haversine(target["lat"], target["lng"], info.get("latitude"), info.get("longitude"))
 
                         hotels.append({
@@ -119,13 +118,11 @@ def index():
                             "jalan_url": j_url,
                             "raw_dist": dist_km if dist_km is not None else 999
                         })
-                    
-                    # 距離が近い順に並び替え
                     hotels.sort(key=lambda x: x["raw_dist"])
                 else:
                     print(f"楽天APIエラー: {res.status_code} - {res.text}")
             except Exception as e:
-                print(f"通信エラー: {e}")
+                print(f"Error: {e}")
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
