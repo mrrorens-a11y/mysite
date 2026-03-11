@@ -30,27 +30,64 @@
             overflow: hidden;
         }
         
+        /* 🚙 ジープのSVG（左下） */
         header::before {
             content: '';
             position: absolute;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M92 65H85V58c0-2-1-3-3-3h-7l-8-15c-1-2-3-3-5-3H35c-2 0-4 1-5 3l-8 15h-7c-2 0-3 1-3 3v10c0 2 1 3 3 3h5c0 5 4 9 9 9s9-4 9-9h30c0 5 4 9 9 9s9-4 9-9h5c2 0 3-1 3-3V68c0-2-1-3-3-3zM28 80c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zm48 0c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zM33 42h28l7 13H26l7-13z' fill='%231d1d1f'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-size: contain;
-            width: 45px; height: 45px; opacity: 0.05; left: 5%; bottom: 5px; z-index: 1;
+            width: 45px;
+            height: 45px;
+            opacity: 0.05;
+            left: 5%;
+            bottom: 5px;
+            z-index: 1;
         }
         
+        /* ✈️ 飛行機のSVG（右上） */
         .logo::after {
             content: '';
             position: absolute;
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M95 10a5 5 0 0 0-7 0L55 43l-30-7-5 5 25 10-10 10-10-3-5 5 12 8 8 12 5-5-3-10 10-10 10 25 5-5-7-30 33-33a5 5 0 0 0 0-7Z' fill='%231d1d1f'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
             background-size: contain;
-            width: 38px; height: 38px; opacity: 0.06; right: -35px; top: -12px; transform: rotate(-10deg); z-index: 1;
+            width: 38px;
+            height: 38px;
+            opacity: 0.06;
+            right: -35px; 
+            top: -12px; 
+            transform: rotate(-10deg);
+            z-index: 1;
         }
 
-        .logo-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; text-decoration: none; position: relative; z-index: 2; }
-        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.6rem; font-weight: 500; margin: 0; color: var(--text-main); line-height: 1; position: relative; }
-        .sub-logo { font-size: 11px; font-weight: 400; color: var(--text-main); margin-top: 2px; letter-spacing: 0.05em; }
+        .logo-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            text-decoration: none;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .logo { 
+            font-family: 'Kiwi Maru', serif; 
+            font-size: 2.6rem; 
+            font-weight: 500; 
+            margin: 0; 
+            color: var(--text-main);
+            line-height: 1;
+            position: relative;
+        }
+        
+        .sub-logo {
+            font-size: 11px;
+            font-weight: 400;
+            color: var(--text-sub);
+            margin-top: 2px;
+            letter-spacing: 0.05em;
+        }
 
         .search-section { padding: 30px 20px 20px 20px; text-align: center; }
         .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #d2d2d7; }
@@ -71,14 +108,15 @@
         .price-val { font-size: 18px; font-weight: 700; color: var(--price-red); }
         .mini-btn { background: var(--apple-blue); color: white; text-decoration: none; padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; }
 
-        .announcement { background-color: #f5f5f7; padding: 12px; border-radius: 12px; font-size: 11px; margin-bottom: 20px; color: var(--text-main); font-weight: 500; text-align: left; }
+        .no-results { text-align: center; padding: 50px 20px; color: var(--text-sub); }
+        .no-results p { font-size: 14px; line-height: 1.6; }
     </style>
 </head>
 <body>
     <header>
         <a href="/" class="logo-container">
             <h1 class="logo">tomarun</h1>
-            <span class="sub-logo">目的地から近い・安い宿探し</span>
+            <span class="sub-logo">周辺宿探しサイト</span>
         </a>
     </header>
     
@@ -91,10 +129,10 @@
 
     <div class="hotel-container">
         {% if keyword and not hotels %}
-        <div style="text-align: center; padding: 50px 20px; color: var(--text-sub);">
+        <div class="no-results">
             <p style="font-size: 30px; margin-bottom: 10px;">🏝️</p>
             <p><strong>「{{ keyword }}」に一致する宿が見つかりませんでした。</strong></p>
-            <p style="margin-top: 10px;">別のキーワードで試してみてね！</p>
+            <p style="margin-top: 10px;">別のキーワード（例：那覇、恩納村、国際通り など）で<br>もう一度試してみてね！</p>
         </div>
         {% endif %}
 
@@ -107,10 +145,6 @@
                 {% if h.display_distance %}
                 <p style="font-size: 13px; color: var(--apple-blue); font-weight: 700; margin-top: -8px; margin-bottom: 12px;">
                     📍 目的地まで {{ h.display_distance }}
-                </p>
-                {% else %}
-                <p style="font-size: 11px; color: var(--text-sub); margin-top: -8px; margin-bottom: 12px;">
-                    📏 距離を計算中...
                 </p>
                 {% endif %}
 
@@ -125,8 +159,12 @@
                     <div class="price-line">
                         <span class="ota-label">じゃらんnet</span>
                         <div class="price-wrap">
-                            <span class="price-val" style="color: var(--text-sub); font-size: 14px; font-style: italic;">準備中</span>
-                            <span class="ota-label">---</span>
+                            <span class="price-val">{{ h.jalan_price }}{% if h.jalan_price != "---" %}〜{% endif %}</span>
+                            {% if h.jalan_url %}
+                            <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" rel="noopener noreferrer" style="background: #ff9900;">予約</a>
+                            {% else %}
+                            <span class="ota-label">不明</span>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
@@ -135,23 +173,19 @@
         {% endfor %}
     </div>
 
-    <footer style="margin-top: 50px; padding: 40px 20px; background-color: #fff; border-top: 1px solid rgba(0,0,0,0.1);">
+    <footer style="margin-top: 50px; padding: 40px 20px; background-color: #fff; border-top: 1px solid rgba(0,0,0,0.1); text-align: center;">
         <div style="max-width: 500px; margin: 0 auto;">
-            <p style="font-family: 'Kiwi Maru', serif; font-size: 1.2rem; color: var(--text-main); margin-bottom: 20px; text-align: center;">とまるん</p>
+            <p style="font-family: 'Kiwi Maru', serif; font-size: 1.2rem; color: var(--text-main); margin-bottom: 10px;">tomarun</p>
             
-            <div class="announcement">
-                当サイトは旅行支援サービスとして、今後各OTAや海外予約サイトなどのサービス拡充を予定しております。
-            </div>
-
             <div style="font-size: 11px; color: var(--text-sub); line-height: 1.8;">
-                <p><strong>【免責事項】</strong><br>
+                <p>【免責事項】<br>
                 当サイトに掲載している料金・空き状況等の情報は、楽天トラベル・じゃらんnet等の各予約サイトから取得した時点のものです。最新の情報は必ずリンク先の公式サイトにてご確認ください。予約に関するトラブルについて、当サイトは一切の責任を負いかねます。</p>
                 
-                <p style="margin-top: 15px;"><strong>【プライバシーポリシー】</strong><br>
+                <p style="margin-top: 15px;">【プライバシーポリシー】<br>
                 当サイトでは、楽天アフィリエイト等のアフィリエイトプログラムを利用しています。また、利便性向上のためCookieを使用することがあります。</p>
                 
-                <p style="margin-top: 25px; border-top: 1px dashed #ddd; padding-top: 15px; text-align: center; font-weight: 700;">
-                    &copy; 2026 とまるん事務局
+                <p style="margin-top: 25px; border-top: 1px dashed #ddd; padding-top: 15px; font-weight: 700;">
+                    &copy; 2026 tomarun. All rights reserved.
                 </p>
             </div>
         </div>
