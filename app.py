@@ -2,7 +2,7 @@ import os
 import asyncio
 import httpx
 import requests
-import urllib.parse  # URLエンコード用に追加
+import urllib.parse
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
@@ -17,13 +17,15 @@ RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- じゃらん価格取得 ---
+# --- じゃらん名寄せ検索（非同期版） ---
 async def fetch_jalan_data(client, r_name):
-    if not RECRUIT_API_KEY:
-        # APIキーがない場合は検索URLだけ生成
-        encoded_name = urllib.parse.quote(r_name)
-        return "---", f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
+    # 初期値（APIがダメでも検索結果ページに飛ばすURL）
+    encoded_name = urllib.parse.quote(r_name)
+    fallback_url = f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
     
+    if not RECRUIT_API_KEY:
+        return "---", fallback_url
+
     j_params = {
         "key": RECRUIT_API_KEY,
         "keyword": r_name,
@@ -40,13 +42,10 @@ async def fetch_jalan_data(client, r_name):
                     if score > 75:
                         price = j_hotel.get("sampleRateFrom")
                         url = j_hotel.get("urls", {}).get("pc")
-                        return (f"¥{price}" if price else "---"), (url or "")
+                        return (f"¥{price}" if price else "---"), (url or fallback_url)
     except:
         pass
-    
-    # マッチしなかった場合は、じゃらんのキーワード検索結果ページへ飛ばす
-    encoded_name = urllib.parse.quote(r_name)
-    return "---", f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
+    return "---", fallback_url
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -65,17 +64,20 @@ def index():
                 "hits": 15
             }
 
+            # 🚨 復活させた403エラー対策ヘッダー
             headers = {
+                "referer": "https://mysite-l8l0.onrender.com/",
+                "origin": "https://mysite-l8l0.onrender.com",
                 "user-agent": "Mozilla/5.0",
                 "accept": "application/json"
             }
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
-                        # 非同期でじゃらんの価格を取得
                         async def get_all_prices():
                             async with httpx.AsyncClient() as client:
                                 tasks = [fetch_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
@@ -87,7 +89,6 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             hotel_name = info.get("hotelName", "")
                             encoded_name = urllib.parse.quote(hotel_name)
-                            
                             j_price, j_url = jalan_results[idx]
 
                             hotels.append({
@@ -97,12 +98,12 @@ def index():
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 "jalan_price": j_price,
                                 "jalan_url": j_url,
-                                # Yahoo!トラベル（キーワード検索URL）
                                 "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={encoded_name}",
-                                # Booking.com（キーワード検索URL）
                                 "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={encoded_name}",
-                                "display_distance": None # 距離は一旦無効化
+                                "display_distance": None # 距離は無効化
                             })
+                else:
+                    print(f"RAKUTEN ERROR: {res.status_code}")
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 

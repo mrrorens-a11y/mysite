@@ -22,53 +22,19 @@
             --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
         }
         body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--apple-bg); margin: 0 auto; max-width: 500px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
-        
-        header { 
-            background: rgba(255,255,255,0.85); 
-            backdrop-filter: blur(20px); 
-            padding: 16px 16px 10px 16px; 
-            text-align: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            border-bottom: 1px solid rgba(0,0,0,0.1); 
-        }
-
-        .logo-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            cursor: pointer;
-            text-decoration: none;
-        }
-        
-        .logo { 
-            font-family: 'Kiwi Maru', serif; 
-            font-size: 2.6rem; 
-            font-weight: 500; 
-            margin: 0; 
-            color: var(--text-main);
-            line-height: 1;
-        }
-        
-        .sub-logo {
-            font-size: 11px;
-            font-weight: 400;
-            color: var(--text-sub);
-            margin-top: 2px;
-        }
-
+        header { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 16px 16px 10px 16px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .logo-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; text-decoration: none; }
+        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.6rem; font-weight: 500; margin: 0; color: var(--text-main); line-height: 1; }
+        .sub-logo { font-size: 11px; font-weight: 400; color: var(--text-sub); margin-top: 2px; }
         .search-section { padding: 30px 20px 20px 20px; text-align: center; }
         .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #d2d2d7; }
         input { flex: 1; padding: 12px 16px; border: none; font-size: 16px; outline: none; background: transparent; }
         button#search-btn { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; }
-
         .hotel-container { padding: 15px; min-height: 40vh; }
         .hotel-card { background: white; border-radius: 24px; margin-bottom: 30px; overflow: hidden; box-shadow: var(--card-shadow); display: flex; flex-direction: column; }
         .hotel-img { width: 100%; height: 260px; object-fit: cover; }
         .hotel-info { padding: 20px; }
         .hotel-name { font-size: 19px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.3; }
-        
         .comparison-box { background: #f9f9fb; border-radius: 16px; padding: 4px 16px; border: 1px solid rgba(0,0,0,0.05); }
         .price-line { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
         .price-line:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.05); }
@@ -76,10 +42,8 @@
         .price-wrap { display: flex; align-items: center; gap: 12px; }
         .price-val { font-size: 18px; font-weight: 700; color: var(--price-red); }
         .mini-btn { color: white; text-decoration: none; padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; width: 44px; display: inline-block;}
-
         .subtle-links { display: flex; justify-content: space-around; margin-top: 14px; padding: 0 10px; }
         .subtle-link-item { font-size: 12px; color: var(--text-sub); text-decoration: none; font-weight: 600; }
-
         .no-results { text-align: center; padding: 50px 20px; color: var(--text-sub); }
     </style>
 </head>
