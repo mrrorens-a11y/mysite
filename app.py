@@ -2,6 +2,7 @@ import os
 import asyncio
 import httpx
 import requests
+import urllib.parse
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
@@ -66,7 +67,6 @@ def index():
                 "hits": 15
             }
 
-            # 🚨 ここをChatGPT版と完全に一致させました（403対策）
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
@@ -81,7 +81,7 @@ def index():
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
-                        # 2. じゃらん一斉検索（ここで時間を短縮）
+                        # 2. じゃらん一斉検索
                         async def get_all_prices():
                             async with httpx.AsyncClient() as client:
                                 tasks = [fetch_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
@@ -91,10 +91,19 @@ def index():
 
                         for idx, h in enumerate(data["hotels"]):
                             info = h["hotel"][0]["hotelBasicInfo"]
+                            hotel_name = info.get("hotelName", "")
                             j_price, j_url = jalan_results[idx]
 
+                            # URLエンコード（日本語をURL用に変換）
+                            encoded_name = urllib.parse.quote(hotel_name)
+                            
+                            # 各種LinkSwitch用URLの生成
+                            yahoo_url = f"https://travel.yahoo.co.jp/search/?q={encoded_name}"
+                            booking_url = f"https://www.booking.com/searchresults.ja.html?ss={encoded_name}"
+                            fallback_jalan_url = f"https://www.jalan.net/biz/search/bizSearchResults.do?keyword={encoded_name}"
+
                             hotels.append({
-                                "hotelName": info.get("hotelName"),
+                                "hotelName": hotel_name,
                                 "hotelImageUrl": info.get("hotelImageUrl"),
                                 "address1": info.get("address1", ""),
                                 "address2": info.get("address2", ""),
@@ -102,7 +111,9 @@ def index():
                                 "display_distance": format_distance(info.get("searchDistance")),
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 "jalan_price": j_price,
-                                "jalan_url": j_url
+                                "jalan_url": j_url if j_url else fallback_jalan_url, # APIにURLがない場合は検索URLを代入
+                                "yahoo_url": yahoo_url,
+                                "booking_url": booking_url
                             })
                 else:
                     print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
