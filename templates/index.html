@@ -32,39 +32,6 @@
             top: 0; 
             z-index: 100; 
             border-bottom: 1px solid rgba(0,0,0,0.1); 
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* 🚙 ジープのSVG（左下） */
-        header::before {
-            content: '';
-            position: absolute;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M92 65H85V58c0-2-1-3-3-3h-7l-8-15c-1-2-3-3-5-3H35c-2 0-4 1-5 3l-8 15h-7c-2 0-3 1-3 3v10c0 2 1 3 3 3h5c0 5 4 9 9 9s9-4 9-9h30c0 5 4 9 9 9s9-4 9-9h5c2 0 3-1 3-3V68c0-2-1-3-3-3zM28 80c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zm48 0c-3 0-5-2-5-5s2-5 5-5 5 2 5 5-2 5-5 5zM33 42h28l7 13H26l7-13z' fill='%231d1d1f'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-size: contain;
-            width: 45px;
-            height: 45px;
-            opacity: 0.05;
-            left: 5%;
-            bottom: 5px;
-            z-index: 1;
-        }
-        
-        /* ✈️ 飛行機のSVG（右上） */
-        .logo::after {
-            content: '';
-            position: absolute;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath d='M95 10a5 5 0 0 0-7 0L55 43l-30-7-5 5 25 10-10 10-10-3-5 5 12 8 8 12 5-5-3-10 10-10 10 25 5-5-7-30 33-33a5 5 0 0 0 0-7Z' fill='%231d1d1f'/%3E%3C/svg%3E");
-            background-repeat: no-repeat;
-            background-size: contain;
-            width: 38px;
-            height: 38px;
-            opacity: 0.06;
-            right: -35px; 
-            top: -12px; 
-            transform: rotate(-10deg);
-            z-index: 1;
         }
 
         .logo-container {
@@ -73,8 +40,6 @@
             align-items: center;
             cursor: pointer;
             text-decoration: none;
-            position: relative;
-            z-index: 2;
         }
         
         .logo { 
@@ -84,7 +49,6 @@
             margin: 0; 
             color: var(--text-main);
             line-height: 1;
-            position: relative;
         }
         
         .sub-logo {
@@ -92,7 +56,6 @@
             font-weight: 400;
             color: var(--text-sub);
             margin-top: 2px;
-            letter-spacing: 0.05em;
         }
 
         .search-section { padding: 30px 20px 20px 20px; text-align: center; }
@@ -114,13 +77,10 @@
         .price-val { font-size: 18px; font-weight: 700; color: var(--price-red); }
         .mini-btn { color: white; text-decoration: none; padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; width: 44px; display: inline-block;}
 
-        /* 追加導線（航空券・Booking）用デザイン */
         .subtle-links { display: flex; justify-content: space-around; margin-top: 14px; padding: 0 10px; }
-        .subtle-link-item { font-size: 12px; color: var(--text-sub); text-decoration: none; font-weight: 600; transition: color 0.2s; }
-        .subtle-link-item:hover { color: var(--apple-blue); }
+        .subtle-link-item { font-size: 12px; color: var(--text-sub); text-decoration: none; font-weight: 600; }
 
         .no-results { text-align: center; padding: 50px 20px; color: var(--text-sub); }
-        .no-results p { font-size: 14px; line-height: 1.6; }
     </style>
 </head>
 <body>
@@ -141,9 +101,8 @@
     <div class="hotel-container">
         {% if keyword and not hotels %}
         <div class="no-results">
-            <p style="font-size: 30px; margin-bottom: 10px;">🏝️</p>
+            <p style="font-size: 30px;">🏝️</p>
             <p><strong>「{{ keyword }}」に一致する宿が見つかりませんでした。</strong></p>
-            <p style="margin-top: 10px;">別のキーワード（例：那覇、恩納村、国際通り など）で<br>もう一度試してみてね！</p>
         </div>
         {% endif %}
 
@@ -153,64 +112,44 @@
             <div class="hotel-info">
                 <h2 class="hotel-name">{{ h.hotelName }}</h2>
                 
-                {% if h.display_distance %}
-                <p style="font-size: 13px; color: var(--apple-blue); font-weight: 700; margin-top: -8px; margin-bottom: 12px;">
-                    📍 目的地まで {{ h.display_distance }}
-                </p>
-                {% endif %}
-
                 <div class="comparison-box">
                     <div class="price-line">
                         <span class="ota-label">楽天トラベル</span>
                         <div class="price-wrap">
                             <span class="price-val">{% if h.hotelMinCharge %}¥{{ h.hotelMinCharge }}〜{% else %}---{% endif %}</span>
-                            <a href="{{ h.target_url }}" class="mini-btn" target="_blank" rel="noopener noreferrer" style="background: #bf0000;">予約</a>
+                            <a href="{{ h.target_url }}" class="mini-btn" target="_blank" style="background: #bf0000;">予約</a>
                         </div>
                     </div>
                     
                     <div class="price-line">
                         <span class="ota-label">じゃらんnet</span>
                         <div class="price-wrap">
-                            <span class="price-val">{% if h.jalan_price != "---" %}{{ h.jalan_price }}〜{% else %}---{% endif %}</span>
-                            <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" rel="noopener noreferrer" style="background: #ff7e00;">予約</a>
+                            <span class="price-val">{{ h.jalan_price }}〜</span>
+                            <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" style="background: #ff7e00;">予約</a>
                         </div>
                     </div>
 
                     <div class="price-line">
                         <span class="ota-label">Yahoo!トラベル</span>
                         <div class="price-wrap">
-                            <span class="price-val" style="font-size: 13px; color: var(--text-sub); font-weight: normal;">料金を確認する</span>
-                            <a href="{{ h.yahoo_url }}" class="mini-btn" target="_blank" rel="noopener noreferrer" style="background: #ff0033;">確認</a>
+                            <span class="price-val" style="font-size: 13px; color: var(--text-sub); font-weight: normal;">料金を確認</span>
+                            <a href="{{ h.yahoo_url }}" class="mini-btn" target="_blank" style="background: #ff0033;">確認</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="subtle-links">
                     <a href="{{ h.yahoo_url }}" class="subtle-link-item" target="_blank">✈️ 航空券付きを検索</a>
-                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.comで確認</a>
+                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.com</a>
                 </div>
-
             </div>
         </div>
         {% endfor %}
     </div>
 
     <footer style="margin-top: 50px; padding: 40px 20px; background-color: #fff; border-top: 1px solid rgba(0,0,0,0.1); text-align: center;">
-        <div style="max-width: 500px; margin: 0 auto;">
-            <p style="font-family: 'Kiwi Maru', serif; font-size: 1.2rem; color: var(--text-main); margin-bottom: 10px;">tomarun</p>
-            
-            <div style="font-size: 11px; color: var(--text-sub); line-height: 1.8;">
-                <p>【免責事項】<br>
-                当サイトに掲載している料金・空き状況等の情報は、各予約サイトから取得した時点のものです。最新の情報は必ずリンク先の公式サイトにてご確認ください。予約に関するトラブルについて、当サイトは一切の責任を負いかねます。</p>
-                
-                <p style="margin-top: 15px;">【プライバシーポリシー】<br>
-                当サイトでは、楽天アフィリエイト、バリューコマース等のアフィリエイトプログラムを利用しています。また、利便性向上のためCookieを使用することがあります。</p>
-                
-                <p style="margin-top: 25px; border-top: 1px dashed #ddd; padding-top: 15px; font-weight: 700;">
-                    &copy; 2026 tomarun. All rights reserved.
-                </p>
-            </div>
-        </div>
+        <p style="font-family: 'Kiwi Maru', serif; font-size: 1.2rem; color: var(--text-main);">tomarun</p>
+        <p style="font-size: 11px; color: var(--text-sub);">© 2026 tomarun. All rights reserved.</p>
     </footer>
 </body>
 </html>
