@@ -2,7 +2,6 @@ import os
 import asyncio
 import httpx
 import requests
-import urllib.parse
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
@@ -17,15 +16,16 @@ RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
-# --- じゃらん名寄せ検索（非同期版） ---
-async def fetch_jalan_data(client, r_name):
-    # 初期値（APIがダメでも検索結果ページに飛ばすURL）
-    encoded_name = urllib.parse.quote(r_name)
-    fallback_url = f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
-    
-    if not RECRUIT_API_KEY:
-        return "---", fallback_url
+def format_distance(m):
+    if m is None: return ""
+    try:
+        m = float(m)
+        return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
+    except: return ""
 
+# --- じゃらん名寄せ検索（爆速・非同期版） ---
+async def fetch_jalan_data(client, r_name):
+    if not RECRUIT_API_KEY: return "---", ""
     j_params = {
         "key": RECRUIT_API_KEY,
         "keyword": r_name,
@@ -42,10 +42,11 @@ async def fetch_jalan_data(client, r_name):
                     if score > 75:
                         price = j_hotel.get("sampleRateFrom")
                         url = j_hotel.get("urls", {}).get("pc")
-                        return (f"¥{price}" if price else "---"), (url or fallback_url)
-    except:
-        pass
-    return "---", fallback_url
+                        if url:
+                            url = url.replace("http://", "https://")
+                        return (f"¥{price}" if price else "---"), (url or "")
+    except: pass
+    return "---", ""
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -56,15 +57,16 @@ def index():
         keyword = request.form.get("keyword", "").strip()
 
         if keyword:
+            # 1. 楽天APIリクエスト
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey": RAKUTEN_ACCESS_KEY,
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
                 "hits": 15
             }
 
-            # 🚨 復活させた403エラー対策ヘッダー
             headers = {
                 "referer": "https://mysite-l8l0.onrender.com/",
                 "origin": "https://mysite-l8l0.onrender.com",
@@ -74,10 +76,12 @@ def index():
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
-                
+                print(f"DEBUG: Rakuten Status: {res.status_code}")
+
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
+
                         async def get_all_prices():
                             async with httpx.AsyncClient() as client:
                                 tasks = [fetch_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
@@ -87,23 +91,21 @@ def index():
 
                         for idx, h in enumerate(data["hotels"]):
                             info = h["hotel"][0]["hotelBasicInfo"]
-                            hotel_name = info.get("hotelName", "")
-                            encoded_name = urllib.parse.quote(hotel_name)
                             j_price, j_url = jalan_results[idx]
 
                             hotels.append({
-                                "hotelName": hotel_name,
+                                "hotelName": info.get("hotelName"),
                                 "hotelImageUrl": info.get("hotelImageUrl"),
+                                "address1": info.get("address1", ""),
+                                "address2": info.get("address2", ""),
                                 "hotelMinCharge": info.get("hotelMinCharge"),
+                                "display_distance": format_distance(info.get("searchDistance")),
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 "jalan_price": j_price,
-                                "jalan_url": j_url,
-                                "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={encoded_name}",
-                                "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={encoded_name}",
-                                "display_distance": None # 距離は無効化
+                                "jalan_url": j_url
                             })
                 else:
-                    print(f"RAKUTEN ERROR: {res.status_code}")
+                    print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
