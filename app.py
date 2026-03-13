@@ -4,13 +4,11 @@ import httpx
 import requests
 import urllib.parse
 from flask import Flask, render_template, request
-from rapidfuzz import fuzz
 
 app = Flask(__name__)
 
-# 環境変数
+# 環境変数（アクセスキーはコード内では使わないので削除してOK）
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
-RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")  # 🚨追加
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
@@ -19,7 +17,6 @@ RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSea
 async def fetch_jalan_data(client, r_name):
     encoded_name = urllib.parse.quote(r_name)
     fallback_url = f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
-    
     if not RECRUIT_API_KEY:
         return "---", fallback_url
 
@@ -50,10 +47,9 @@ def index():
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         if keyword:
-            # 楽天APIへのリクエスト
+            # 🚨 パラメータを極限までシンプルにしました
             params = {
                 "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,  # 🚨ここに追加しました
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
@@ -91,12 +87,11 @@ def index():
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 "jalan_price": jalan_results[idx][0],
                                 "jalan_url": jalan_results[idx][1],
-                                # Yahoo!トラベル（宿泊＋航空券を見据えた検索URL）
                                 "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={enc_name}",
-                                # Booking.com（アフィリエイト用検索URL）
                                 "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={enc_name}"
                             })
                 else:
+                    # エラーの時はログに出す（デバッグ用）
                     print(f"API Error: {res.status_code}")
             except Exception as e:
                 print(f"System Error: {e}")
