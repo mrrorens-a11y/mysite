@@ -13,14 +13,12 @@ RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 RECRUIT_API_KEY      = os.environ.get("RECRUIT_API_KEY", "").strip()
 VC_SWITCH_LINK_BASE  = os.environ.get("VC_SWITCH_LINK", "").strip()
-
-# ★ あなたのサイトURLをRenderの環境変数 SITE_URL に設定してください
-# 例: https://mysite-l8l0.onrender.com
-SITE_URL = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
+SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
 
 print("=" * 60)
 print(f"[INIT] RAKUTEN_APP_ID     : {'SET ('+str(len(RAKUTEN_APP_ID))+' chars)' if RAKUTEN_APP_ID else '*** MISSING ***'}")
 print(f"[INIT] RAKUTEN_ACCESS_KEY : {'SET ('+str(len(RAKUTEN_ACCESS_KEY))+' chars)' if RAKUTEN_ACCESS_KEY else '*** MISSING ***'}")
+print(f"[INIT] RECRUIT_API_KEY    : {'SET' if RECRUIT_API_KEY else 'not set (じゃらんはキーワード検索URLにフォールバック)'}")
 print(f"[INIT] SITE_URL           : {SITE_URL}")
 print("=" * 60)
 
@@ -34,32 +32,46 @@ def wrap_vc(url: str) -> str:
 
 
 async def fetch_jalan_data(client, r_name):
+    """
+    じゃらんAPIでホテル検索。
+    APIキーがない・取得失敗の場合はじゃらんのキーワード検索URLにフォールバック。
+    """
     encoded_name = urllib.parse.quote(r_name)
-    fallback_url = f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
+    # ★ フォールバックURL修正：じゃらんのキーワード検索ページ
+    fallback_url = f"https://www.jalan.net/yad/?kw={encoded_name}"
+
     if not RECRUIT_API_KEY:
         return "---", fallback_url
 
     j_params = {
-        "key": RECRUIT_API_KEY,
+        "key":     RECRUIT_API_KEY,
         "keyword": r_name,
-        "format": "json",
-        "count": 1
+        "format":  "json",
+        "count":   1,
     }
     try:
+        # ★ じゃらんAPIの正しいエンドポイント
         res = await client.get(
             "https://webservice.recruit.co.jp/jalan/hotel/v1/",
             params=j_params,
             timeout=3.0
         )
+        print(f"[JALAN] status={res.status_code} for '{r_name}'")
         if res.status_code == 200:
             j_data = res.json()
-            if "results" in j_data and "hotel" in j_data["results"]:
-                j_hotel = j_data["results"]["hotel"][0]
-                price = j_hotel.get("sampleRateFrom")
-                url   = j_hotel.get("urls", {}).get("pc")
-                return (f"¥{price}" if price else "---"), (url or fallback_url)
-    except Exception:
-        pass
+            hotels_list = j_data.get("results", {}).get("hotel", [])
+            if hotels_list:
+                j_hotel = hotels_list[0]
+                price   = j_hotel.get("sampleRateFrom")
+                url     = j_hotel.get("urls", {}).get("pc", "")
+                # URLが空やじゃらんトップの場合はフォールバック
+                if url and "jalan.net" in url and "/yad" in url:
+                    return (f"¥{price}" if price else "---"), url
+                else:
+                    return (f"¥{price}" if price else "---"), fallback_url
+    except Exception as e:
+        print(f"[JALAN] Error: {e}")
+
     return "---", fallback_url
 
 
@@ -87,14 +99,11 @@ def index():
             if RAKUTEN_AFFILIATE_ID:
                 params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
-            # ★ 403エラーの修正箇所：Refererヘッダーを追加
             headers = {
                 "Authorization": f"Bearer {RAKUTEN_ACCESS_KEY}",
                 "Referer":       SITE_URL,
                 "Origin":        SITE_URL,
             }
-
-            print(f"[API] keyword='{keyword}', Referer={SITE_URL}")
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
@@ -120,13 +129,10 @@ def index():
 
                         try:
                             jalan_results = asyncio.run(get_all_prices())
-                        except Exception:
+                        except Exception as e:
+                            print(f"[JALAN] asyncio error: {e}")
                             jalan_results = [
-                                (
-                                    "---",
-                                    f"https://www.jalan.net/fwSearch.do?fw="
-                                    f"{urllib.parse.quote(h['hotel'][0]['hotelBasicInfo'].get('hotelName', ''))}"
-                                )
+                                ("---", f"https://www.jalan.net/yad/?kw={urllib.parse.quote(h['hotel'][0]['hotelBasicInfo'].get('hotelName', ''))}")
                                 for h in data["hotels"]
                             ]
 
