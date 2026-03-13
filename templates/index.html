@@ -3,105 +3,209 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer-when-downgrade">
-    <title>tomarun | 宿泊比較</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-    
-    <script type="text/javascript" language="javascript">
-        var vc_pid = "892564859";
-    </script>
-    <script type="text/javascript" src="//aml.valuecommerce.com/vcdal.js" async></script>
-
+    <title>宿検索 | Minimal Stay Search</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --apple-blue: #0071e3;
             --apple-bg: #f5f5f7;
-            --text-main: #1d1d1f;
-            --text-sub: #86868b;
-            --price-red: #d6001c;
-            --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            --apple-card: #ffffff;
+            --apple-text: #1d1d1f;
+            --apple-blue: #0066cc;
+            --amazon-orange: #ff9900;
+            --shadow: 0 4px 12px rgba(0,0,0,0.08);
         }
-        body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--apple-bg); margin: 0 auto; max-width: 500px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
-        header { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 16px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
-        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.2rem; margin: 0; color: var(--text-main); }
-        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
-        .search-section { padding: 25px 20px; }
-        .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #d2d2d7; }
-        input { flex: 1; padding: 10px 15px; border: none; font-size: 16px; outline: none; background: transparent; }
-        button#search-btn { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
-        
-        .hotel-card { background: white; border-radius: 20px; margin: 15px; overflow: hidden; box-shadow: var(--card-shadow); }
-        .hotel-img { width: 100%; height: 240px; object-fit: cover; }
-        .hotel-info { padding: 20px; }
-        .hotel-name { font-size: 18px; font-weight: 700; margin-bottom: 15px; line-height: 1.4; }
-        
-        .comparison-box { background: #f9f9fb; border-radius: 14px; padding: 5px 15px; border: 1px solid rgba(0,0,0,0.03); }
-        .price-line { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .price-line:last-child { border-bottom: none; }
-        .ota-label { font-size: 13px; font-weight: 700; }
-        .price-val { font-size: 17px; font-weight: 700; color: var(--price-red); }
-        .mini-btn { color: white; text-decoration: none; padding: 6px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; min-width: 50px; text-align: center; }
-        
-        .subtle-links { display: flex; justify-content: space-around; margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; }
-        .subtle-link-item { font-size: 12px; color: var(--apple-blue); text-decoration: none; font-weight: 500; }
+
+        body {
+            font-family: 'SF Pro Display', 'Noto Sans JP', sans-serif;
+            background-color: var(--apple-bg);
+            color: var(--apple-text);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            margin-bottom: 30px;
+        }
+
+        /* 検索フォーム：Amazon的なシンプルさ */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 40px;
+            background: var(--apple-card);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 15px;
+            border: 1px solid #d2d2d7;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+
+        button {
+            background-color: var(--apple-text);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.8;
+        }
+
+        /* エラーメッセージ表示エリア */
+        .error-banner {
+            background-color: #fff2f2;
+            color: #d70000;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #ffdada;
+        }
+
+        /* 宿カード：Apple的な高級感 */
+        .hotel-card {
+            background: var(--apple-card);
+            border-radius: 18px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            display: flex;
+            gap: 20px;
+            transition: transform 0.2s ease;
+        }
+
+        .hotel-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .hotel-image {
+            width: 180px;
+            height: 140px;
+            object-fit: cover;
+            border-radius: 12px;
+        }
+
+        .hotel-info {
+            flex: 1;
+        }
+
+        .hotel-name {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0 0 10px 0;
+        }
+
+        .price-list {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        /* OTAごとの縦並び料金比較 */
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f2f2f2;
+        }
+
+        .price-item:last-child {
+            border-bottom: none;
+        }
+
+        .ota-label {
+            font-size: 14px;
+            color: #86868b;
+        }
+
+        .ota-price {
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .ota-price.rakuten { color: #bf0000; }
+        .ota-price.jalan { color: var(--amazon-orange); }
+
+        .btn-reserve {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: var(--apple-blue);
+            color: white;
+            text-decoration: none;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        @media (max-width: 600px) {
+            .hotel-card { flex-direction: column; }
+            .hotel-image { width: 100%; height: 200px; }
+        }
     </style>
 </head>
 <body>
-    <header>
-        <a href="/" class="logo-container">
-            <h1 class="logo">tomarun</h1>
-            <span class="sub-logo">TRAVEL COMPARISON</span>
-        </a>
-    </header>
-    
-    <div class="search-section">
-        <form class="search-area" method="POST">
-            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}">
-            <button type="submit" id="search-btn">検索</button>
-        </form>
+
+<div class="container">
+    <h1>Stay Finder</h1>
+
+    <form method="POST" class="search-box">
+        <input type="text" name="keyword" placeholder="どこに泊まりますか？（例：箱根 温泉）" value="{{ keyword }}" required>
+        <button type="submit">検索</button>
+    </form>
+
+    {% if error_msg %}
+    <div class="error-banner">
+        {{ error_msg }}
     </div>
+    {% endif %}
 
-    <div class="hotel-container">
-        {% for h in hotels %}
-        <div class="hotel-card">
-            <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}">
-            <div class="hotel-info">
-                <h2 class="hotel-name">{{ h.hotelName }}</h2>
-                
-                <div class="comparison-box">
-                    <div class="price-line">
-                        <span class="ota-label">楽天トラベル</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-val">{% if h.hotelMinCharge %}¥{{ h.hotelMinCharge }}〜{% else %}---{% endif %}</span>
-                            <a href="{{ h.target_url }}" class="mini-btn" target="_blank" style="background: #bf0000;">予約</a>
-                        </div>
-                    </div>
-                    
-                    <div class="price-line">
-                        <span class="ota-label">じゃらんnet</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-val">{{ h.jalan_price }}〜</span>
-                            <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" style="background: #ff7e00;">予約</a>
-                        </div>
-                    </div>
-
-                    <div class="price-line">
-                        <span class="ota-label">Yahoo!パック</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 12px; color: var(--text-sub);">航空券セット</span>
-                            <a href="{{ h.yahoo_url }}" class="mini-btn" target="_blank" style="background: #ff0033;">確認</a>
-                        </div>
-                    </div>
+    {% for hotel in hotels %}
+    <div class="hotel-card">
+        <img src="{{ hotel.hotelImageUrl }}" alt="{{ hotel.hotelName }}" class="hotel-image">
+        <div class="hotel-info">
+            <h2 class="hotel-name">{{ hotel.hotelName }}</h2>
+            
+            <div class="price-list">
+                <div class="price-item">
+                    <span class="ota-label">楽天トラベル</span>
+                    <span class="ota-price rakuten">
+                        {% if hotel.hotelMinCharge %}¥{{ hotel.hotelMinCharge }}〜{% else %}満室{% endif %}
+                    </span>
                 </div>
-
-                <div class="subtle-links">
-                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.comで見る</a>
-                    <a href="{{ h.yahoo_url }}" class="subtle-link-item" target="_blank">✈️ 航空券付きを探す</a>
+                <div class="price-item">
+                    <span class="ota-label">じゃらんnet</span>
+                    <span class="ota-price jalan">{{ hotel.jalan_price }}</span>
                 </div>
             </div>
+
+            <a href="{{ hotel.target_url }}" target="_blank" rel="noopener" class="btn-reserve">楽天で詳細を見る</a>
+            <a href="{{ hotel.jalan_url }}" target="_blank" rel="noopener" style="margin-left:10px; color:var(--apple-blue); font-size:13px; text-decoration:none;">じゃらんで見る</a>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
+</div>
+
 </body>
 </html>
