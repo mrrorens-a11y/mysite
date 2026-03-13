@@ -7,21 +7,22 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# ── 環境変数（.strip()で余分なスペース・改行を除去）──────────────
+# ── 環境変数 ──────────────────────────────────────────────────────
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 RECRUIT_API_KEY      = os.environ.get("RECRUIT_API_KEY", "").strip()
 VC_SWITCH_LINK_BASE  = os.environ.get("VC_SWITCH_LINK", "").strip()
 
-# ── 起動時に全変数をログ出力（値の先頭4文字だけ表示して確認）──
-print("=" * 50)
-print(f"[INIT] RAKUTEN_APP_ID     : '{RAKUTEN_APP_ID[:4]}...' len={len(RAKUTEN_APP_ID)}" if RAKUTEN_APP_ID else "[INIT] RAKUTEN_APP_ID     : *** MISSING ***")
-print(f"[INIT] RAKUTEN_ACCESS_KEY : '{RAKUTEN_ACCESS_KEY[:4]}...' len={len(RAKUTEN_ACCESS_KEY)}" if RAKUTEN_ACCESS_KEY else "[INIT] RAKUTEN_ACCESS_KEY : (not set)")
-print(f"[INIT] RAKUTEN_AFFILIATE_ID: '{RAKUTEN_AFFILIATE_ID[:4]}...' len={len(RAKUTEN_AFFILIATE_ID)}" if RAKUTEN_AFFILIATE_ID else "[INIT] RAKUTEN_AFFILIATE_ID: (not set)")
-print("=" * 50)
+# ── 起動時チェック ────────────────────────────────────────────────
+print("=" * 60)
+print(f"[INIT] RAKUTEN_APP_ID     : {'SET ('+str(len(RAKUTEN_APP_ID))+' chars)' if RAKUTEN_APP_ID else '*** MISSING ***'}")
+print(f"[INIT] RAKUTEN_ACCESS_KEY : {'SET ('+str(len(RAKUTEN_ACCESS_KEY))+' chars)' if RAKUTEN_ACCESS_KEY else '*** MISSING ***'}")
+print(f"[INIT] RAKUTEN_AFFILIATE_ID: {'SET' if RAKUTEN_AFFILIATE_ID else 'not set (optional)'}")
+print("=" * 60)
 
-RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
+# ── 新APIドメイン（2026年2月移行済み）────────────────────────────
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 
 def wrap_vc(url: str) -> str:
@@ -70,37 +71,36 @@ def index():
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
 
-        if not RAKUTEN_APP_ID:
-            error_msg = "RAKUTEN_APP_ID が未設定です。Render環境変数を確認してください。"
+        if not RAKUTEN_APP_ID or not RAKUTEN_ACCESS_KEY:
+            error_msg = "RAKUTEN_APP_ID または RAKUTEN_ACCESS_KEY が未設定です。"
             return render_template("index.html", hotels=hotels, keyword=keyword, error_msg=error_msg)
 
         if keyword:
-            # ── パラメータ構築 ──────────────────────────────
+            # ── 新API パラメータ ──────────────────────────────────
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey":     RAKUTEN_ACCESS_KEY,   # 新APIでは必須
                 "format":        "json",
                 "keyword":       keyword,
                 "hits":          10,
             }
-            # accessKey がある場合のみ追加
-            if RAKUTEN_ACCESS_KEY:
-                params["accessKey"] = RAKUTEN_ACCESS_KEY
-
-            # affiliateId がある場合のみ追加
             if RAKUTEN_AFFILIATE_ID:
                 params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
-            # ── デバッグ：送信パラメータをログ出力 ──────────
+            # ── 新API認証ヘッダー（Bearer形式）──────────────────
+            headers = {
+                "Authorization": f"Bearer {RAKUTEN_ACCESS_KEY}",
+            }
+
+            print(f"[API] Calling: {RAKUTEN_API_URL}")
             print(f"[API] keyword='{keyword}'")
-            print(f"[API] applicationId='{params['applicationId']}' (len={len(params['applicationId'])})")
-            print(f"[API] accessKey set: {'YES' if 'accessKey' in params else 'NO'}")
-            print(f"[API] affiliateId set: {'YES' if 'affiliateId' in params else 'NO'}")
 
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
 
                 print(f"[API] Status: {res.status_code}")
-                print(f"[API] Response: {res.text[:500]}")
+                if res.status_code != 200:
+                    print(f"[API] Response: {res.text[:300]}")
 
                 if res.status_code == 200:
                     data = res.json()
@@ -152,7 +152,7 @@ def index():
                             })
                     else:
                         error_msg = "該当する宿が見つかりませんでした。"
-                        print(f"[API] No hotels in response. Keys: {list(data.keys())}")
+                        print(f"[API] No hotels. Response keys: {list(data.keys())}")
                 else:
                     error_msg = f"楽天APIエラー ({res.status_code}): {res.text[:200]}"
 
