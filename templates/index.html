@@ -22,64 +22,57 @@
             --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
         }
         body { font-family: 'Noto Sans JP', sans-serif; background-color: var(--apple-bg); margin: 0 auto; max-width: 500px; color: var(--text-main); -webkit-font-smoothing: antialiased; }
-        header { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 16px 16px 10px 16px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.1); }
-        .logo-container { display: flex; flex-direction: column; align-items: center; cursor: pointer; text-decoration: none; }
-        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.6rem; font-weight: 500; margin: 0; color: var(--text-main); line-height: 1; }
-        .sub-logo { font-size: 11px; font-weight: 400; color: var(--text-sub); margin-top: 2px; }
-        .search-section { padding: 30px 20px 20px 20px; text-align: center; }
-        .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: 1px solid #d2d2d7; }
-        input { flex: 1; padding: 12px 16px; border: none; font-size: 16px; outline: none; background: transparent; }
-        button#search-btn { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 12px; font-weight: 600; cursor: pointer; }
-        .hotel-container { padding: 15px; min-height: 40vh; }
-        .hotel-card { background: white; border-radius: 24px; margin-bottom: 30px; overflow: hidden; box-shadow: var(--card-shadow); display: flex; flex-direction: column; }
-        .hotel-img { width: 100%; height: 260px; object-fit: cover; }
+        header { background: rgba(255,255,255,0.85); backdrop-filter: blur(20px); padding: 16px; text-align: center; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(0,0,0,0.1); }
+        .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
+        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.2rem; margin: 0; color: var(--text-main); }
+        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
+        .search-section { padding: 25px 20px; }
+        .search-area { display: flex; gap: 8px; background: white; padding: 6px; border-radius: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #d2d2d7; }
+        input { flex: 1; padding: 10px 15px; border: none; font-size: 16px; outline: none; background: transparent; }
+        button#search-btn { background: var(--text-main); color: white; border: none; padding: 0 20px; border-radius: 10px; font-weight: 600; cursor: pointer; }
+        
+        .hotel-card { background: white; border-radius: 20px; margin: 15px; overflow: hidden; box-shadow: var(--card-shadow); }
+        .hotel-img { width: 100%; height: 240px; object-fit: cover; }
         .hotel-info { padding: 20px; }
-        .hotel-name { font-size: 19px; font-weight: 800; margin: 0 0 12px 0; line-height: 1.3; }
-        .comparison-box { background: #f9f9fb; border-radius: 16px; padding: 4px 16px; border: 1px solid rgba(0,0,0,0.05); }
-        .price-line { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; }
-        .price-line:not(:last-child) { border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .ota-label { font-size: 13px; color: var(--text-main); font-weight: 700; }
-        .price-wrap { display: flex; align-items: center; gap: 12px; }
-        .price-val { font-size: 18px; font-weight: 700; color: var(--price-red); }
-        .mini-btn { color: white; text-decoration: none; padding: 8px 18px; border-radius: 10px; font-size: 12px; font-weight: 700; text-align: center; width: 44px; display: inline-block;}
-        .subtle-links { display: flex; justify-content: space-around; margin-top: 14px; padding: 0 10px; }
-        .subtle-link-item { font-size: 12px; color: var(--text-sub); text-decoration: none; font-weight: 600; }
-        .no-results { text-align: center; padding: 50px 20px; color: var(--text-sub); }
+        .hotel-name { font-size: 18px; font-weight: 700; margin-bottom: 15px; line-height: 1.4; }
+        
+        .comparison-box { background: #f9f9fb; border-radius: 14px; padding: 5px 15px; border: 1px solid rgba(0,0,0,0.03); }
+        .price-line { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .price-line:last-child { border-bottom: none; }
+        .ota-label { font-size: 13px; font-weight: 700; }
+        .price-val { font-size: 17px; font-weight: 700; color: var(--price-red); }
+        .mini-btn { color: white; text-decoration: none; padding: 6px 15px; border-radius: 8px; font-size: 12px; font-weight: 700; min-width: 50px; text-align: center; }
+        
+        .subtle-links { display: flex; justify-content: space-around; margin-top: 15px; border-top: 1px solid #eee; padding-top: 12px; }
+        .subtle-link-item { font-size: 12px; color: var(--apple-blue); text-decoration: none; font-weight: 500; }
     </style>
 </head>
 <body>
     <header>
         <a href="/" class="logo-container">
             <h1 class="logo">tomarun</h1>
-            <span class="sub-logo">周辺宿探しサイト</span>
+            <span class="sub-logo">TRAVEL COMPARISON</span>
         </a>
     </header>
     
     <div class="search-section">
         <form class="search-area" method="POST">
-            <input type="text" name="keyword" placeholder="観光地を入力してね" value="{{ keyword }}" autocomplete="off">
+            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}">
             <button type="submit" id="search-btn">検索</button>
         </form>
     </div>
 
     <div class="hotel-container">
-        {% if keyword and not hotels %}
-        <div class="no-results">
-            <p style="font-size: 30px;">🏝️</p>
-            <p><strong>「{{ keyword }}」に一致する宿が見つかりませんでした。</strong></p>
-        </div>
-        {% endif %}
-
         {% for h in hotels %}
         <div class="hotel-card">
-            <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}" loading="lazy">
+            <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}">
             <div class="hotel-info">
                 <h2 class="hotel-name">{{ h.hotelName }}</h2>
                 
                 <div class="comparison-box">
                     <div class="price-line">
                         <span class="ota-label">楽天トラベル</span>
-                        <div class="price-wrap">
+                        <div style="display: flex; align-items: center; gap: 10px;">
                             <span class="price-val">{% if h.hotelMinCharge %}¥{{ h.hotelMinCharge }}〜{% else %}---{% endif %}</span>
                             <a href="{{ h.target_url }}" class="mini-btn" target="_blank" style="background: #bf0000;">予約</a>
                         </div>
@@ -87,33 +80,28 @@
                     
                     <div class="price-line">
                         <span class="ota-label">じゃらんnet</span>
-                        <div class="price-wrap">
+                        <div style="display: flex; align-items: center; gap: 10px;">
                             <span class="price-val">{{ h.jalan_price }}〜</span>
                             <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" style="background: #ff7e00;">予約</a>
                         </div>
                     </div>
 
                     <div class="price-line">
-                        <span class="ota-label">Yahoo!トラベル</span>
-                        <div class="price-wrap">
-                            <span class="price-val" style="font-size: 13px; color: var(--text-sub); font-weight: normal;">料金を確認</span>
+                        <span class="ota-label">Yahoo!パック</span>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 12px; color: var(--text-sub);">航空券セット</span>
                             <a href="{{ h.yahoo_url }}" class="mini-btn" target="_blank" style="background: #ff0033;">確認</a>
                         </div>
                     </div>
                 </div>
 
                 <div class="subtle-links">
-                    <a href="{{ h.yahoo_url }}" class="subtle-link-item" target="_blank">✈️ 航空券付きを検索</a>
-                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.com</a>
+                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.comで見る</a>
+                    <a href="{{ h.yahoo_url }}" class="subtle-link-item" target="_blank">✈️ 航空券付きを探す</a>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-
-    <footer style="margin-top: 50px; padding: 40px 20px; background-color: #fff; border-top: 1px solid rgba(0,0,0,0.1); text-align: center;">
-        <p style="font-family: 'Kiwi Maru', serif; font-size: 1.2rem; color: var(--text-main);">tomarun</p>
-        <p style="font-size: 11px; color: var(--text-sub);">© 2026 tomarun. All rights reserved.</p>
-    </footer>
 </body>
 </html>

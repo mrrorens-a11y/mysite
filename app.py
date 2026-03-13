@@ -2,6 +2,7 @@ import os
 import asyncio
 import httpx
 import requests
+import urllib.parse
 from flask import Flask, render_template, request
 from rapidfuzz import fuzz
 
@@ -9,44 +10,37 @@ app = Flask(__name__)
 
 # 環境変数
 RAKUTEN_APP_ID = os.environ.get("RAKUTEN_APP_ID")
-RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")
+RAKUTEN_ACCESS_KEY = os.environ.get("RAKUTEN_ACCESS_KEY")  # 🚨追加
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID")
 RECRUIT_API_KEY = os.environ.get("RECRUIT_API_KEY")
 
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-JALAN_API_URL = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
+RAKUTEN_API_URL = "https://app.rakuten.co.jp/services/api/Travel/KeywordHotelSearch/20170426"
 
-def format_distance(m):
-    if m is None: return ""
-    try:
-        m = float(m)
-        return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
-    except: return ""
-
-# --- じゃらん名寄せ検索（爆速・非同期版） ---
 async def fetch_jalan_data(client, r_name):
-    if not RECRUIT_API_KEY: return "---", ""
+    encoded_name = urllib.parse.quote(r_name)
+    fallback_url = f"https://www.jalan.net/fwSearch.do?fw={encoded_name}"
+    
+    if not RECRUIT_API_KEY:
+        return "---", fallback_url
+
     j_params = {
         "key": RECRUIT_API_KEY,
         "keyword": r_name,
         "format": "json",
-        "count": 5
+        "count": 1
     }
     try:
-        res = await client.get(JALAN_API_URL, params=j_params, timeout=5.0)
+        res = await client.get("https://webservice.recruit.co.jp/jalan/hotel/v1/", params=j_params, timeout=3.0)
         if res.status_code == 200:
             j_data = res.json()
             if "results" in j_data and "hotel" in j_data["results"]:
-                for j_hotel in j_data["results"]["hotel"]:
-                    score = fuzz.token_sort_ratio(r_name, j_hotel["hotelName"])
-                    if score > 75:
-                        price = j_hotel.get("sampleRateFrom")
-                        url = j_hotel.get("urls", {}).get("pc")
-                        if url:
-                            url = url.replace("http://", "https://")
-                        return (f"¥{price}" if price else "---"), (url or "")
-    except: pass
-    return "---", ""
+                j_hotel = j_data["results"]["hotel"][0]
+                price = j_hotel.get("sampleRateFrom")
+                url = j_hotel.get("urls", {}).get("pc")
+                return (f"¥{price}" if price else "---"), (url or fallback_url)
+    except:
+        pass
+    return "---", fallback_url
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -55,59 +49,57 @@ def index():
 
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
-
         if keyword:
-            # 1. 楽天APIリクエスト
+            # 楽天APIへのリクエスト
             params = {
                 "applicationId": RAKUTEN_APP_ID,
-                "accessKey": RAKUTEN_ACCESS_KEY,
+                "accessKey": RAKUTEN_ACCESS_KEY,  # 🚨ここに追加しました
                 "affiliateId": RAKUTEN_AFFILIATE_ID,
                 "format": "json",
                 "keyword": keyword,
-                "hits": 15
+                "hits": 10
             }
-
+            
             headers = {
-                "referer": "https://mysite-l8l0.onrender.com/",
-                "origin": "https://mysite-l8l0.onrender.com",
-                "user-agent": "Mozilla/5.0",
-                "accept": "application/json"
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
             }
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
-                print(f"DEBUG: Rakuten Status: {res.status_code}")
-
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
-
                         async def get_all_prices():
                             async with httpx.AsyncClient() as client:
                                 tasks = [fetch_jalan_data(client, h["hotel"][0]["hotelBasicInfo"].get("hotelName", "")) for h in data["hotels"]]
                                 return await asyncio.gather(*tasks)
                         
-                        jalan_results = asyncio.run(get_all_prices())
+                        try:
+                            jalan_results = asyncio.run(get_all_prices())
+                        except:
+                            jalan_results = [("---", f"https://www.jalan.net/fwSearch.do?fw={urllib.parse.quote(h['hotel'][0]['hotelBasicInfo'].get('hotelName',''))}") for h in data["hotels"]]
 
                         for idx, h in enumerate(data["hotels"]):
                             info = h["hotel"][0]["hotelBasicInfo"]
-                            j_price, j_url = jalan_results[idx]
-
+                            name = info.get("hotelName", "")
+                            enc_name = urllib.parse.quote(name)
+                            
                             hotels.append({
-                                "hotelName": info.get("hotelName"),
+                                "hotelName": name,
                                 "hotelImageUrl": info.get("hotelImageUrl"),
-                                "address1": info.get("address1", ""),
-                                "address2": info.get("address2", ""),
                                 "hotelMinCharge": info.get("hotelMinCharge"),
-                                "display_distance": format_distance(info.get("searchDistance")),
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_price": j_price,
-                                "jalan_url": j_url
+                                "jalan_price": jalan_results[idx][0],
+                                "jalan_url": jalan_results[idx][1],
+                                # Yahoo!トラベル（宿泊＋航空券を見据えた検索URL）
+                                "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={enc_name}",
+                                # Booking.com（アフィリエイト用検索URL）
+                                "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={enc_name}"
                             })
                 else:
-                    print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
+                    print(f"API Error: {res.status_code}")
             except Exception as e:
-                print("SYSTEM ERROR:", e)
+                print(f"System Error: {e}")
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
