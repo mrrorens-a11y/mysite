@@ -14,19 +14,20 @@ RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 RECRUIT_API_KEY      = os.environ.get("RECRUIT_API_KEY", "").strip()
 VC_SWITCH_LINK_BASE  = os.environ.get("VC_SWITCH_LINK", "").strip()
 
-# ── 起動時チェック ────────────────────────────────────────────────
+# ★ あなたのサイトURLをRenderの環境変数 SITE_URL に設定してください
+# 例: https://mysite-l8l0.onrender.com
+SITE_URL = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
+
 print("=" * 60)
 print(f"[INIT] RAKUTEN_APP_ID     : {'SET ('+str(len(RAKUTEN_APP_ID))+' chars)' if RAKUTEN_APP_ID else '*** MISSING ***'}")
 print(f"[INIT] RAKUTEN_ACCESS_KEY : {'SET ('+str(len(RAKUTEN_ACCESS_KEY))+' chars)' if RAKUTEN_ACCESS_KEY else '*** MISSING ***'}")
-print(f"[INIT] RAKUTEN_AFFILIATE_ID: {'SET' if RAKUTEN_AFFILIATE_ID else 'not set (optional)'}")
+print(f"[INIT] SITE_URL           : {SITE_URL}")
 print("=" * 60)
 
-# ── 新APIドメイン（2026年2月移行済み）────────────────────────────
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 
 def wrap_vc(url: str) -> str:
-    """URLをバリューコマース スイッチリンクでラップ"""
     if not VC_SWITCH_LINK_BASE or not url:
         return url
     return VC_SWITCH_LINK_BASE + urllib.parse.quote(url, safe="")
@@ -76,10 +77,9 @@ def index():
             return render_template("index.html", hotels=hotels, keyword=keyword, error_msg=error_msg)
 
         if keyword:
-            # ── 新API パラメータ ──────────────────────────────────
             params = {
                 "applicationId": RAKUTEN_APP_ID,
-                "accessKey":     RAKUTEN_ACCESS_KEY,   # 新APIでは必須
+                "accessKey":     RAKUTEN_ACCESS_KEY,
                 "format":        "json",
                 "keyword":       keyword,
                 "hits":          10,
@@ -87,13 +87,14 @@ def index():
             if RAKUTEN_AFFILIATE_ID:
                 params["affiliateId"] = RAKUTEN_AFFILIATE_ID
 
-            # ── 新API認証ヘッダー（Bearer形式）──────────────────
+            # ★ 403エラーの修正箇所：Refererヘッダーを追加
             headers = {
                 "Authorization": f"Bearer {RAKUTEN_ACCESS_KEY}",
+                "Referer":       SITE_URL,
+                "Origin":        SITE_URL,
             }
 
-            print(f"[API] Calling: {RAKUTEN_API_URL}")
-            print(f"[API] keyword='{keyword}'")
+            print(f"[API] keyword='{keyword}', Referer={SITE_URL}")
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
