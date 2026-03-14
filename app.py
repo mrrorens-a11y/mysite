@@ -5,6 +5,7 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
+# 環境変数の読み込み
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
@@ -17,7 +18,6 @@ print(f"[INIT] SITE_URL          : {SITE_URL}")
 print("=" * 60)
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -45,8 +45,8 @@ def index():
 
             headers = {
                 "Authorization": f"Bearer {RAKUTEN_ACCESS_KEY}",
-                "Referer":       SITE_URL,
-                "Origin":        SITE_URL,
+                "Referer":        SITE_URL,
+                "Origin":         SITE_URL,
             }
 
             try:
@@ -60,13 +60,15 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
                             enc  = urllib.parse.quote(name)
+                            
+                            # 各OTAへのリンク生成（LinkSwitchが後でアフィリエイト化する）
                             hotels.append({
                                 "hotelName":      name,
                                 "hotelImageUrl":  info.get("hotelImageUrl"),
                                 "hotelMinCharge": info.get("hotelMinCharge"),
-                                "target_url":     info.get("affiliateUrl") or info.get("hotelInformationUrl", ""),
+                                "target_url":      info.get("affiliateUrl") or info.get("hotelInformationUrl", ""),
                                 "jalan_url":      f"https://www.jalan.net/yad/?srt=1&kw={enc}",
-                                "yahoo_url":      f"https://travel.yahoo.co.jp/search/?kw={enc}&type=hotel",
+                                "yahoo_url":      f"https://www.google.com/search?q={enc}+Yahoo!トラベル",
                                 "booking_url":    f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
                             })
                     else:
@@ -81,7 +83,6 @@ def index():
 
     return render_template("index.html", hotels=hotels, keyword=keyword, error_msg=error_msg)
 
-
+# Renderのデプロイ要件に合わせた起動設定
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
