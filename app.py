@@ -59,7 +59,7 @@ def index():
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
-                            
+
                             # --- 検索精度を最大化するためのロジック ---
                             # ホテル名と住所を組み合わせて検索精度を上げる
                             search_keyword = f"{name} {info.get('address1', '')}"
@@ -74,16 +74,16 @@ def index():
                                 "address2":         info.get("address2", ""),
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
-                                
+
                                 # 楽天：アフィリエイトURL
                                 "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                
-                                # じゃらん：宿名と住所で検索（これが一番エラーにならない）
-                                "jalan_url":        f"https://www.jalan.net/furusato_search/?keyword={search_enc}",
-                                
+
+                                # ✅ 修正：furusato_search → 正しいホテル検索エンドポイント
+                                "jalan_url":        f"https://www.jalan.net/searches/results/index.php?keyword={search_enc}",
+
                                 # Yahoo!トラベル：検索ページへ
                                 "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
-                                
+
                                 # Booking.com：検索ページへ
                                 "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                             })
