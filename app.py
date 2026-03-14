@@ -1,6 +1,4 @@
 import os
-import asyncio
-import httpx
 import requests
 import urllib.parse
 from flask import Flask, render_template, request
@@ -30,9 +28,20 @@ def wrap_vc(url: str) -> str:
 
 
 def make_jalan_url(hotel_name: str) -> str:
-    """ホテル名でじゃらん検索ページURLを生成"""
+    # ★ じゃらん正しい検索URL
     encoded = urllib.parse.quote(hotel_name)
-    return f"https://www.jalan.net/yad/?kw={encoded}"
+    return f"https://www.jalan.net/yad/yad.do?kw={encoded}"
+
+
+def make_yahoo_url(hotel_name: str) -> str:
+    # ★ Yahoo!トラベル正しい検索URL
+    encoded = urllib.parse.quote(hotel_name)
+    return f"https://travel.yahoo.co.jp/search/?keyword={encoded}"
+
+
+def make_booking_url(hotel_name: str) -> str:
+    encoded = urllib.parse.quote(hotel_name)
+    return f"https://www.booking.com/searchresults.ja.html?ss={encoded}&lang=ja"
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -76,29 +85,26 @@ def index():
                     data = res.json()
                     if "hotels" in data:
                         for h in data["hotels"]:
-                            info     = h["hotel"][0]["hotelBasicInfo"]
-                            name     = info.get("hotelName", "")
-                            enc_name = urllib.parse.quote(name)
+                            info = h["hotel"][0]["hotelBasicInfo"]
+                            name = info.get("hotelName", "")
 
                             rakuten_raw_url = (
                                 info.get("affiliateUrl")
                                 or info.get("hotelInformationUrl", "")
                             )
-                            rakuten_url = wrap_vc(rakuten_raw_url)
 
                             hotels.append({
                                 "hotelName":      name,
                                 "hotelImageUrl":  info.get("hotelImageUrl"),
                                 "hotelMinCharge": info.get("hotelMinCharge"),
-                                "target_url":     rakuten_url,
-                                # じゃらんはAPIを使わずホテル名検索URLで直接リンク
+                                "target_url":     wrap_vc(rakuten_raw_url),
                                 "jalan_url":      make_jalan_url(name),
-                                "yahoo_url":      f"https://travel.yahoo.co.jp/search/?stext={enc_name}",
-                                "booking_url":    f"https://www.booking.com/searchresults.ja.html?ss={enc_name}",
+                                "yahoo_url":      make_yahoo_url(name),
+                                "booking_url":    make_booking_url(name),
                             })
                     else:
                         error_msg = "該当する宿が見つかりませんでした。"
-                        print(f"[API] No hotels. Response keys: {list(data.keys())}")
+                        print(f"[API] No hotels. Keys: {list(data.keys())}")
                 else:
                     error_msg = f"楽天APIエラー ({res.status_code}): {res.text[:200]}"
 
