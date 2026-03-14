@@ -60,7 +60,6 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
                             enc  = urllib.parse.quote(name)
-
                             hotels.append({
                                 "hotelName":      name,
                                 "hotelImageUrl":  info.get("hotelImageUrl"),
