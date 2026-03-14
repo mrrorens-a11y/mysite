@@ -1,7 +1,7 @@
 import os
 import requests
 import urllib.parse
-import re  # 電話番号の掃除用にエンジンの追加
+import re
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -14,15 +14,12 @@ SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-
 def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
-        # 1000m未満なら「500m」、以上なら「1.5km」のように変換（理想のUI）
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
-
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -51,21 +48,22 @@ def index():
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
-                print(f"DEBUG: Rakuten Status: {res.status_code}")
-
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
-
-                            # --- 検索精度を最大化するためのロジック ---
-                            # ホテル名と住所を組み合わせて検索精度を上げる
+                            
+                            # 宿名と都道府県で検索ワード作成
                             search_keyword = f"{name} {info.get('address1', '')}"
-                            # 安全にURLに含めるためにエンコード
                             search_enc = urllib.parse.quote(search_keyword)
-                            # ----------------------------------------
+
+                            # じゃらんの正式な「宿名検索」URL形式（エラー回避用パラメータ付き）
+                            jalan_link = f"https://www.jalan.net/uw/uwp2011/uww2011init.do?keyword={search_enc}&stayYear=&stayMonth=&stayDay=&stayCount=1&roomCount=1&adultNum=2&distCd=01"
+                            
+                            # Yahoo!トラベルの検索リンク
+                            yahoo_link = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}&adults=2"
 
                             hotels.append({
                                 "hotelName":        name,
@@ -74,27 +72,15 @@ def index():
                                 "address2":         info.get("address2", ""),
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
-
-                                # 楽天：アフィリエイトURL
                                 "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-
-                                # ✅ 修正：furusato_search → 正しいホテル検索エンドポイント
-                                "jalan_url":        f"https://www.jalan.net/searches/results/index.php?keyword={search_enc}",
-
-                                # Yahoo!トラベル：検索ページへ
-                                "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
-
-                                # Booking.com：検索ページへ
+                                "jalan_url":        jalan_link,
+                                "yahoo_url":        yahoo_link,
                                 "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                             })
-                    else:
-                        print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
-
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
