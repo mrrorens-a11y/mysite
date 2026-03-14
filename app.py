@@ -55,14 +55,17 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
                             
-                            # 宿名と都道府県で検索ワード作成
-                            search_keyword = f"{name} {info.get('address1', '')}"
+                            # --- ゆるめ検索用：宿名から（）や【】などの注釈を消す ---
+                            clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
+                            # 宿名(きれい)と都道府県で検索ワード作成
+                            search_keyword = f"{clean_name} {info.get('address1', '')}"
                             search_enc = urllib.parse.quote(search_keyword)
+                            # --------------------------------------------------
 
-                            # じゃらんの正式な「宿名検索」URL形式（エラー回避用パラメータ付き）
+                            # じゃらん：検索用URL形式
                             jalan_link = f"https://www.jalan.net/uw/uwp2011/uww2011init.do?keyword={search_enc}&stayYear=&stayMonth=&stayDay=&stayCount=1&roomCount=1&adultNum=2&distCd=01"
                             
-                            # Yahoo!トラベルの検索リンク
+                            # Yahoo!トラベル
                             yahoo_link = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}&adults=2"
 
                             hotels.append({
