@@ -1,7 +1,7 @@
 import os
 import requests
 import urllib.parse
-import re
+import re  # 電話番号の掃除用にエンジンの追加
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -19,7 +19,7 @@ def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
-        # 0.5kmではなく500mと表示する理想のUIロジック
+        # 1000m未満なら「500m」、以上なら「1.5km」のように変換（理想のUI）
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
 
@@ -60,9 +60,12 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
                             
-                            # 【新ロジック】宿名＋住所1（都道府県）で検索精度を最大化
+                            # --- 検索精度を最大化するためのロジック ---
+                            # ホテル名と住所を組み合わせて検索精度を上げる
                             search_keyword = f"{name} {info.get('address1', '')}"
+                            # 安全にURLに含めるためにエンコード
                             search_enc = urllib.parse.quote(search_keyword)
+                            # ----------------------------------------
 
                             hotels.append({
                                 "hotelName":        name,
@@ -72,17 +75,17 @@ def index():
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
                                 
-                                # 楽天（アフィリエイトリンク）
+                                # 楽天：アフィリエイトURL
                                 "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 
-                                # じゃらん：宿名と住所で検索（LinkSwitchでアフィリエイト化）
+                                # じゃらん：宿名と住所で検索（これが一番エラーにならない）
                                 "jalan_url":        f"https://www.jalan.net/furusato_search/?keyword={search_enc}",
                                 
-                                # Yahoo!トラベル：宿名と住所で検索
+                                # Yahoo!トラベル：検索ページへ
                                 "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
                                 
-                                # Booking.com：宿名と住所で検索
-                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}&lang=ja",
+                                # Booking.com：検索ページへ
+                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                             })
                     else:
                         print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
