@@ -9,9 +9,11 @@ app = Flask(__name__)
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
+RECRUIT_API_KEY      = os.environ.get("RECRUIT_API_KEY", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+JALAN_API_URL   = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
 
 def format_distance(m):
@@ -20,6 +22,39 @@ def format_distance(m):
         m = float(m)
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
+
+
+# じゃらん宿ページ取得
+def get_jalan_url(hotel_name):
+
+    if not RECRUIT_API_KEY:
+        return None
+
+    params = {
+        "key": RECRUIT_API_KEY,
+        "keyword": hotel_name,
+        "format": "json",
+        "count": 3
+    }
+
+    try:
+        r = requests.get(JALAN_API_URL, params=params, timeout=5)
+
+        if r.status_code == 200:
+
+            data = r.json()
+
+            if "results" in data and "hotel" in data["results"]:
+
+                # 一番最初のホテル
+                hotel = data["results"]["hotel"][0]
+
+                return hotel["hotel"][0]["hotelBasicInfo"]["hotelUrl"]
+
+    except Exception as e:
+        print("JALAN ERROR:", e)
+
+    return None
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -40,7 +75,6 @@ def index():
                 "hits":          15
             }
 
-            # 成功していたヘッダー構成をそのまま維持
             headers = {
                 "referer":    SITE_URL + "/",
                 "origin":     SITE_URL,
@@ -53,12 +87,24 @@ def index():
                 print(f"DEBUG: Rakuten Status: {res.status_code}")
 
                 if res.status_code == 200:
+
                     data = res.json()
+
                     if "hotels" in data:
+
                         for h in data["hotels"]:
+
                             info = h["hotel"][0]["hotelBasicInfo"]
+
                             name = info.get("hotelName", "")
                             enc  = urllib.parse.quote(name)
+
+                            # じゃらんAPI検索
+                            jalan_url = get_jalan_url(name)
+
+                            # fallback
+                            if not jalan_url:
+                                jalan_url = f"https://www.jalan.net/search/?keyword={enc}"
 
                             hotels.append({
                                 "hotelName":        name,
@@ -67,15 +113,20 @@ def index():
                                 "address2":         info.get("address2", ""),
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
-                                # 楽天：affiliateUrl（RAKUTEN_AFFILIATE_IDがあれば自動でアフィリリンク）
-                                "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                # じゃらん：ホテル名でじゃらん検索（LinkSwitchがアフィリリンクに自動変換）
-                                "jalan_url":        f"https://www.jalan.net/yado/hotel/{enc}/",
-                                # Yahoo!トラベル：ホテル名で検索
-                                "yahoo_url":        f"https://travel.yahoo.co.jp/search/?kw={enc}",
-                                # Booking.com
-                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
+
+                                # 楽天
+                                "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+
+                                # じゃらん
+                                "jalan_url": jalan_url,
+
+                                # Yahoo
+                                "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={enc}",
+
+                                # Booking
+                                "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
                             })
+
                 else:
                     print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
 
