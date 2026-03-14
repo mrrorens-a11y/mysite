@@ -1,7 +1,7 @@
 import os
 import requests
 import urllib.parse
-import re  # 電話番号の掃除用にエンジンの追加
+import re
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -19,7 +19,7 @@ def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
-        # 1000m未満なら「500m」、以上なら「1.5km」のように変換（理想のUI）
+        # 0.5kmではなく500mと表示する理想のUIロジック
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
 
@@ -59,11 +59,10 @@ def index():
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
-                            # ホテル名（エンコード済み）
-                            enc = urllib.parse.quote(name)
-                            # 電話番号（数字のみ抽出）
-                            tel_raw = info.get("telephoneNo", "")
-                            tel_clean = "".join(re.findall(r'\d+', tel_raw))
+                            
+                            # 【新ロジック】宿名＋住所1（都道府県）で検索精度を最大化
+                            search_keyword = f"{name} {info.get('address1', '')}"
+                            search_enc = urllib.parse.quote(search_keyword)
 
                             hotels.append({
                                 "hotelName":        name,
@@ -73,17 +72,17 @@ def index():
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
                                 
-                                # 楽天：アフィリエイトURL
+                                # 楽天（アフィリエイトリンク）
                                 "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 
-                                # じゃらん：電話番号で確実に飛ばす（ホワイト手法）
-                                "jalan_url":        f"https://www.jalan.net/furusato_search/?keyword={tel_clean}",
+                                # じゃらん：宿名と住所で検索（LinkSwitchでアフィリエイト化）
+                                "jalan_url":        f"https://www.jalan.net/furusato_search/?keyword={search_enc}",
                                 
-                                # Yahoo!トラベル：電話番号で検索
-                                "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={tel_clean}",
+                                # Yahoo!トラベル：宿名と住所で検索
+                                "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
                                 
-                                # Booking.com：ここはホテル名で検索
-                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
+                                # Booking.com：宿名と住所で検索
+                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}&lang=ja",
                             })
                     else:
                         print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
