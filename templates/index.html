@@ -5,110 +5,125 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="referrer" content="no-referrer-when-downgrade">
     <title>tomarun | 宿泊比較</title>
-    
     <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-    
+
+    <!-- バリューコマース LinkSwitch：全リンクを自動でアフィリエイトリンクに変換 -->
+    <script type="text/javascript" language="javascript">var vc_pid = "892564859";</script>
     <script type="text/javascript" src="//aml.valuecommerce.com/vcdal.js" async></script>
-    
+
     <style>
         :root {
-            --apple-blue: #0071e3;
             --apple-bg: #f5f5f7;
             --text-main: #1d1d1f;
             --text-sub: #86868b;
             --price-red: #d6001c;
+            --apple-blue: #0071e3;
             --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
-            --white-glass: rgba(255, 255, 255, 0.85);
         }
-
-        body { 
-            font-family: 'SF Pro Display', 'Noto Sans JP', sans-serif; 
-            background-color: var(--apple-bg); 
-            margin: 0 auto; 
-            max-width: 500px; 
-            color: var(--text-main); 
-            -webkit-font-smoothing: antialiased; 
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--apple-bg);
+            margin: 0 auto;
+            max-width: 500px;
+            color: var(--text-main);
+            -webkit-font-smoothing: antialiased;
         }
-
-        header { 
-            background: var(--white-glass); 
-            backdrop-filter: blur(20px); 
-            -webkit-backdrop-filter: blur(20px);
-            padding: 16px; 
-            text-align: center; 
-            position: sticky; 
-            top: 0; 
-            z-index: 100; 
-            border-bottom: 1px solid rgba(0,0,0,0.05); 
+        header {
+            background: rgba(255,255,255,0.85);
+            backdrop-filter: blur(20px);
+            padding: 16px;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
         }
-
         .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
-        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.2rem; margin: 0; color: var(--text-main); letter-spacing: -0.02em; }
-        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.15em; font-weight: 700; }
+        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.2rem; margin: 0; color: var(--text-main); }
+        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
 
-        /* 検索セクション：Amazonのシンプルさを追求 */
-        .search-section { padding: 25px 20px; }
-        .search-area { 
-            display: flex; 
-            gap: 8px; 
-            background: white; 
-            padding: 6px; 
-            border-radius: 14px; 
-            box-shadow: 0 2px 12px rgba(0,0,0,0.04); 
-            border: 1px solid #d2d2d7; 
+        .search-section { padding: 25px 20px 10px; }
+        .search-area {
+            display: flex;
+            gap: 8px;
+            background: white;
+            padding: 6px;
+            border-radius: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #d2d2d7;
         }
-        input { flex: 1; padding: 10px 15px; border: none; font-size: 16px; outline: none; background: transparent; }
-        button#search-btn { 
-            background: var(--text-main); 
-            color: white; 
-            border: none; 
-            padding: 0 22px; 
-            border-radius: 10px; 
-            font-weight: 600; 
-            cursor: pointer;
-            transition: all 0.2s;
+        input {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            font-size: 16px;
+            outline: none;
+            background: transparent;
         }
-        button#search-btn:active { transform: scale(0.95); opacity: 0.8; }
-
-        .error-msg { 
-            color: #d6001c; 
-            text-align: center; 
-            padding: 15px; 
-            font-size: 13px; 
-            background: #fff0f1;
-            margin: 0 20px 20px;
+        button#search-btn {
+            background: var(--text-main);
+            color: white;
+            border: none;
+            padding: 0 20px;
             border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 15px;
         }
 
-        /* 宿カード：Appleの高級感を追求 */
-        .hotel-card { background: white; border-radius: 22px; margin: 15px; overflow: hidden; box-shadow: var(--card-shadow); border: 1px solid rgba(0,0,0,0.02); }
-        .hotel-img { width: 100%; height: 240px; object-fit: cover; }
-        
-        .hotel-info { padding: 22px; }
-        .hotel-header { margin-bottom: 15px; }
-        .hotel-name { font-size: 19px; font-weight: 700; margin: 0 0 4px 0; line-height: 1.4; letter-spacing: -0.01em; }
-        
-        /* 距離表示用：Appleマップのようなクリーンなスタイル */
-        .hotel-distance { font-size: 13px; color: var(--text-sub); display: flex; align-items: center; gap: 4px; }
+        .hotel-card {
+            background: white;
+            border-radius: 20px;
+            margin: 15px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+        .hotel-img { width: 100%; height: 220px; object-fit: cover; display: block; }
+        .hotel-info { padding: 18px 20px 20px; }
+        .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; }
+        .hotel-address { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
 
-        .comparison-box { background: #f9f9fb; border-radius: 16px; padding: 4px 16px; border: 1px solid rgba(0,0,0,0.03); }
-        .price-line { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .price-line:last-child { border-bottom: none; }
-        
-        .ota-label { font-size: 13px; font-weight: 700; }
-        .price-val { font-size: 18px; font-weight: 700; color: var(--price-red); }
-        .price-sub { font-size: 12px; color: var(--text-sub); font-weight: 500; }
-        
-        /* ボタン：Apple風のフラットで丸みのあるデザイン */
-        .mini-btn { color: white; text-decoration: none; padding: 8px 18px; border-radius: 20px; font-size: 12px; font-weight: 700; text-align: center; transition: opacity 0.2s; }
-        .mini-btn:hover { opacity: 0.8; }
+        /* OTAボタン3列 */
+        .ota-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+        .ota-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            border-radius: 12px;
+            padding: 10px 6px;
+            gap: 4px;
+        }
+        .ota-btn .ota-name { font-size: 11px; font-weight: 700; color: white; }
+        .ota-btn .ota-price { font-size: 13px; font-weight: 700; color: white; }
+        .ota-btn.rakuten  { background: #bf0000; }
+        .ota-btn.jalan    { background: #ff7e00; }
+        .ota-btn.yahoo    { background: #ff0033; }
 
-        .subtle-links { display: flex; justify-content: space-around; margin-top: 18px; border-top: 1px solid #f2f2f2; padding-top: 15px; }
-        .subtle-link-item { font-size: 12px; color: var(--apple-blue); text-decoration: none; font-weight: 500; }
+        /* サブリンク */
+        .sub-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+        }
+        .sub-link {
+            font-size: 12px;
+            color: var(--apple-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
-
     <header>
         <a href="/" class="logo-container">
             <h1 class="logo">tomarun</h1>
@@ -118,61 +133,47 @@
 
     <div class="search-section">
         <form class="search-area" method="POST">
-            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}" required>
+            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}">
             <button type="submit" id="search-btn">検索</button>
         </form>
     </div>
 
-    {% if error_msg %}
-    <p class="error-msg">{{ error_msg }}</p>
-    {% endif %}
-
     <div class="hotel-container">
         {% for h in hotels %}
         <div class="hotel-card">
+            {% if h.hotelImageUrl %}
             <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}" loading="lazy">
+            {% endif %}
             <div class="hotel-info">
-                <div class="hotel-header">
-                    <h2 class="hotel-name">{{ h.hotelName }}</h2>
-                    {% if h.distance %}
-                    <div class="hotel-distance">📍 目的地から {{ h.distance }}</div>
-                    {% endif %}
-                </div>
-                                
-                <div class="comparison-box">
-                    <div class="price-line">
-                        <span class="ota-label">楽天トラベル</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-val">{% if h.hotelMinCharge %}¥{{ h.hotelMinCharge }}〜{% else %}---{% endif %}</span>
-                            <a href="{{ h.target_url }}" class="mini-btn" target="_blank" style="background: #bf0000;">予約</a>
-                        </div>
-                    </div>
-                                        
-                    <div class="price-line">
-                        <span class="ota-label">じゃらんnet</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-sub">じゃらんで検索</span>
-                            <a href="{{ h.jalan_url }}" class="mini-btn" target="_blank" style="background: #ff7e00;">検索</a>
-                        </div>
-                    </div>
+                <h2 class="hotel-name">{{ h.hotelName }}</h2>
+                <p class="hotel-address">
+                    {{ h.address1 }}{{ h.address2 }}
+                    {% if h.display_distance %} ／ {{ h.display_distance }}{% endif %}
+                </p>
 
-                    <div class="price-line">
-                        <span class="ota-label">Yahoo!トラベル</span>
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span class="price-sub">PayPayポイント</span>
-                            <a href="{{ h.yahoo_url }}" class="mini-btn" target="_blank" style="background: #ff0033;">確認</a>
-                        </div>
-                    </div>
+                <!-- OTA 3列ボタン -->
+                <div class="ota-grid">
+                    <a href="{{ h.target_url }}" class="ota-btn rakuten" target="_blank" rel="noopener">
+                        <span class="ota-name">楽天トラベル</span>
+                        <span class="ota-price">{% if h.hotelMinCharge %}¥{{ "{:,}".format(h.hotelMinCharge) }}〜{% else %}確認する{% endif %}</span>
+                    </a>
+                    <a href="{{ h.jalan_url }}" class="ota-btn jalan" target="_blank" rel="noopener">
+                        <span class="ota-name">じゃらんnet</span>
+                        <span class="ota-price">検索する</span>
+                    </a>
+                    <a href="{{ h.yahoo_url }}" class="ota-btn yahoo" target="_blank" rel="noopener">
+                        <span class="ota-name">Yahoo!トラベル</span>
+                        <span class="ota-price">検索する</span>
+                    </a>
                 </div>
 
-                <div class="subtle-links">
-                    <a href="{{ h.booking_url }}" class="subtle-link-item" target="_blank">🌍 Booking.com</a>
-                    <a href="{{ h.yahoo_url }}" class="subtle-link-item" target="_blank">✈️ 航空券セット</a>
+                <!-- サブリンク -->
+                <div class="sub-links">
+                    <a href="{{ h.booking_url }}" class="sub-link" target="_blank" rel="noopener">🌍 Booking.com</a>
                 </div>
             </div>
         </div>
         {% endfor %}
     </div>
-
 </body>
 </html>
