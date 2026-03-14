@@ -9,35 +9,33 @@ app = Flask(__name__)
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
-VC_SWITCH_LINK_BASE  = os.environ.get("VC_SWITCH_LINK", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
 
+# ※ バリューコマースのアフィリエイト変換はindex.htmlのLinkSwitch JSタグが自動で行う
+# ※ Renderに追加の環境変数は不要
+
 print("=" * 60)
-print(f"[INIT] RAKUTEN_APP_ID     : {'SET ('+str(len(RAKUTEN_APP_ID))+' chars)' if RAKUTEN_APP_ID else '*** MISSING ***'}")
-print(f"[INIT] RAKUTEN_ACCESS_KEY : {'SET ('+str(len(RAKUTEN_ACCESS_KEY))+' chars)' if RAKUTEN_ACCESS_KEY else '*** MISSING ***'}")
-print(f"[INIT] SITE_URL           : {SITE_URL}")
+print(f"[INIT] RAKUTEN_APP_ID    : {'SET ('+str(len(RAKUTEN_APP_ID))+' chars)' if RAKUTEN_APP_ID else '*** MISSING ***'}")
+print(f"[INIT] RAKUTEN_ACCESS_KEY: {'SET' if RAKUTEN_ACCESS_KEY else '*** MISSING ***'}")
 print("=" * 60)
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 
-def wrap_vc(url: str) -> str:
-    if not VC_SWITCH_LINK_BASE or not url:
-        return url
-    return VC_SWITCH_LINK_BASE + urllib.parse.quote(url, safe="")
+def make_rakuten_url(info: dict) -> str:
+    return info.get("affiliateUrl") or info.get("hotelInformationUrl", "")
 
 
 def make_jalan_url(hotel_name: str) -> str:
-    # じゃらんnetのホテル名検索はURLが廃止されたため
-    # Yahoo!検索でじゃらんに絞り込む形で代替
-    q = urllib.parse.quote(hotel_name + " じゃらん")
-    return f"https://search.yahoo.co.jp/search?p={q}"
+    # じゃらんnetのホテル名検索（LinkSwitchが自動でアフィリリンクに変換）
+    encoded = urllib.parse.quote(hotel_name)
+    return f"https://www.jalan.net/yad/?srt=1&kw={encoded}"
 
 
 def make_yahoo_url(hotel_name: str) -> str:
-    # Yahoo!トラベルの検索URL（kw パラメータ）
+    # Yahoo!トラベル検索（LinkSwitchが自動でアフィリリンクに変換）
     encoded = urllib.parse.quote(hotel_name)
-    return f"https://travel.yahoo.co.jp/search/?kw={encoded}"
+    return f"https://travel.yahoo.co.jp/search/?kw={encoded}&type=hotel"
 
 
 def make_booking_url(hotel_name: str) -> str:
@@ -89,16 +87,11 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
 
-                            rakuten_raw_url = (
-                                info.get("affiliateUrl")
-                                or info.get("hotelInformationUrl", "")
-                            )
-
                             hotels.append({
                                 "hotelName":      name,
                                 "hotelImageUrl":  info.get("hotelImageUrl"),
                                 "hotelMinCharge": info.get("hotelMinCharge"),
-                                "target_url":     wrap_vc(rakuten_raw_url),
+                                "target_url":     make_rakuten_url(info),
                                 "jalan_url":      make_jalan_url(name),
                                 "yahoo_url":      make_yahoo_url(name),
                                 "booking_url":    make_booking_url(name),
