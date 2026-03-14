@@ -28,15 +28,16 @@ def wrap_vc(url: str) -> str:
 
 
 def make_jalan_url(hotel_name: str) -> str:
-    # ★ じゃらん正しい検索URL
-    encoded = urllib.parse.quote(hotel_name)
-    return f"https://www.jalan.net/yad/yad.do?kw={encoded}"
+    # じゃらんnetのホテル名検索はURLが廃止されたため
+    # Yahoo!検索でじゃらんに絞り込む形で代替
+    q = urllib.parse.quote(hotel_name + " じゃらん")
+    return f"https://search.yahoo.co.jp/search?p={q}"
 
 
 def make_yahoo_url(hotel_name: str) -> str:
-    # ★ Yahoo!トラベル正しい検索URL
+    # Yahoo!トラベルの検索URL（kw パラメータ）
     encoded = urllib.parse.quote(hotel_name)
-    return f"https://travel.yahoo.co.jp/search/?keyword={encoded}"
+    return f"https://travel.yahoo.co.jp/search/?kw={encoded}"
 
 
 def make_booking_url(hotel_name: str) -> str:
