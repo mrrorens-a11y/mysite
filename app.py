@@ -1,6 +1,7 @@
 import os
 import requests
 import urllib.parse
+import re  # 電話番号の掃除用にエンジンの追加
 from flask import Flask, render_template, request
 
 app = Flask(__name__)
@@ -9,52 +10,18 @@ app = Flask(__name__)
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
-RECRUIT_API_KEY      = os.environ.get("RECRUIT_API_KEY", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-JALAN_API_URL   = "https://webservice.recruit.co.jp/jalan/hotel/v1/"
 
 
 def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
+        # 1000m未満なら「500m」、以上なら「1.5km」のように変換（理想のUI）
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
-
-
-# じゃらん宿ページ取得
-def get_jalan_url(hotel_name):
-
-    if not RECRUIT_API_KEY:
-        return None
-
-    params = {
-        "key": RECRUIT_API_KEY,
-        "keyword": hotel_name,
-        "format": "json",
-        "count": 3
-    }
-
-    try:
-        r = requests.get(JALAN_API_URL, params=params, timeout=5)
-
-        if r.status_code == 200:
-
-            data = r.json()
-
-            if "results" in data and "hotel" in data["results"]:
-
-                # 一番最初のホテル
-                hotel = data["results"]["hotel"][0]
-
-                return hotel["hotel"][0]["hotelBasicInfo"]["hotelUrl"]
-
-    except Exception as e:
-        print("JALAN ERROR:", e)
-
-    return None
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -87,24 +54,16 @@ def index():
                 print(f"DEBUG: Rakuten Status: {res.status_code}")
 
                 if res.status_code == 200:
-
                     data = res.json()
-
                     if "hotels" in data:
-
                         for h in data["hotels"]:
-
                             info = h["hotel"][0]["hotelBasicInfo"]
-
                             name = info.get("hotelName", "")
-                            enc  = urllib.parse.quote(name)
-
-                            # じゃらんAPI検索
-                            jalan_url = get_jalan_url(name)
-
-                            # fallback
-                            if not jalan_url:
-                                jalan_url = f"https://www.jalan.net/search/?keyword={enc}"
+                            # ホテル名（エンコード済み）
+                            enc = urllib.parse.quote(name)
+                            # 電話番号（数字のみ抽出）
+                            tel_raw = info.get("telephoneNo", "")
+                            tel_clean = "".join(re.findall(r'\d+', tel_raw))
 
                             hotels.append({
                                 "hotelName":        name,
@@ -113,22 +72,21 @@ def index():
                                 "address2":         info.get("address2", ""),
                                 "hotelMinCharge":   info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
-
-                                # 楽天
-                                "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-
-                                # じゃらん
-                                "jalan_url": jalan_url,
-
-                                # Yahoo
-                                "yahoo_url": f"https://travel.yahoo.co.jp/search/?stext={enc}",
-
-                                # Booking
-                                "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
+                                
+                                # 楽天：アフィリエイトURL
+                                "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                                
+                                # じゃらん：電話番号で確実に飛ばす（ホワイト手法）
+                                "jalan_url":        f"https://www.jalan.net/furusato_search/?keyword={tel_clean}",
+                                
+                                # Yahoo!トラベル：電話番号で検索
+                                "yahoo_url":        f"https://travel.yahoo.co.jp/search-hotel/?keyword={tel_clean}",
+                                
+                                # Booking.com：ここはホテル名で検索
+                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={enc}&lang=ja",
                             })
-
-                else:
-                    print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
+                    else:
+                        print(f"RAKUTEN ERROR: {res.status_code}, Body: {res.text}")
 
             except Exception as e:
                 print("SYSTEM ERROR:", e)
