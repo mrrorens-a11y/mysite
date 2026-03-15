@@ -10,7 +10,7 @@ app = Flask(__name__)
 # --- データベースからIDを取得する関数 ---
 def get_hotel_from_db(rakuten_id):
     try:
-        # add_hotel.pyで作ったDBファイルを開く
+        # add_hotel.pyで作られたデータベースファイルを参照します
         conn = sqlite3.connect('tomarun.db')
         cursor = conn.cursor()
         # 楽天IDを元に、じゃらんIDとYahooIDを検索
@@ -23,7 +23,7 @@ def get_hotel_from_db(rakuten_id):
         print(f"DB Error: {e}")
     return None
 
-# 環境変数（Renderの環境設定から読み込み）
+# 環境変数（Renderなどの設定から取得）
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
@@ -31,12 +31,17 @@ SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
+# 距離の表示をわかりやすく変換（500m / 1.2km など）
 def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
-        return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
-    except: return ""
+        if m < 1000:
+            return f"{int(m)}m"
+        else:
+            return f"{round(m/1000, 1)}km"
+    except:
+        return ""
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -71,9 +76,9 @@ def index():
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
-                            rakuten_id = str(info.get("hotelNo")) # 楽天ID
+                            rakuten_id = str(info.get("hotelNo"))
                             
-                            # DBにない場合のバックアップ用検索ワード
+                            # DBにない場合の検索ワードクレンジング（バックアップ用）
                             clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
                             search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
 
@@ -82,14 +87,15 @@ def index():
                             
                             # じゃらんリンクの作成
                             if match and match['jalan']:
-                                # DBにあれば個別ページ直行（ホワイト・確実）
-                                jalan_url = f"https://www.jalan.net/yad{match['jalan']}/"
+                                # DBに 'yad335007' と入っていればそのまま直行URLにする
+                                jalan_url = f"https://www.jalan.net/{match['jalan']}/"
                             else:
-                                # DBになければキーワード検索（バックアップ）
+                                # DBになければキーワード検索ページへ
                                 jalan_url = f"https://www.jalan.net/searches/results/index.php?keyword={search_enc}"
 
                             # Yahoo!リンクの作成
                             if match and match['yahoo']:
+                                # DBに '00902459' と入っていればそのまま直行URLにする
                                 yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo']}/?ppc=2"
                             else:
                                 yahoo_url = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
@@ -112,4 +118,5 @@ def index():
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
+    # Render等の環境に合わせてポートを設定
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))

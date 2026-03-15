@@ -1,11 +1,9 @@
 import sqlite3
 
 def add_hotel_manual(rakuten_id, jalan_id, yahoo_id, name):
-    # tomarun.db に接続（なければ自動で作られます）
     conn = sqlite3.connect('tomarun.db')
     cursor = conn.cursor()
     
-    # テーブルがまだない場合に備えて作成
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS hotels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17,7 +15,7 @@ def add_hotel_manual(rakuten_id, jalan_id, yahoo_id, name):
         )
     ''')
     
-    # データを登録、すでにある場合は更新（REPLACE）
+    # データを登録（あなたが指定した通りの形式で保存します）
     cursor.execute('''
         INSERT OR REPLACE INTO hotels (rakuten_id, jalan_id, yahoo_id, hotel_name)
         VALUES (?, ?, ?, ?)
@@ -26,10 +24,8 @@ def add_hotel_manual(rakuten_id, jalan_id, yahoo_id, name):
     conn.commit()
     conn.close()
     print(f"--- 登録完了 ---")
-    print(f"宿名: {name}")
-    print(f"楽天ID: {rakuten_id} -> じゃらんID: {jalan_id}, YahooID: {yahoo_id}")
+    print(f"じゃらんID: {jalan_id} で保存しました")
 
-# --- ここに情報を入れて実行するだけ ---
 if __name__ == "__main__":
-    # ここを書き換えることで次々と追加できます
-    add_hotel_manual("136206", "335007", "00902459", "ロイヤルビューホテル美ら海")
+    # 指定の形式で実行
+    add_hotel_manual("136206", "yad335007", "00902459", "ロイヤルビューホテル美ら海")
