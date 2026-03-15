@@ -23,7 +23,7 @@ def get_hotel_from_db(rakuten_id):
         print(f"DB Error: {e}")
     return None
 
-# 環境変数（Renderなどの設定から取得）
+# 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
@@ -90,14 +90,14 @@ def index():
                                 # DBに 'yad335007' と入っていればそのまま直行URLにする
                                 jalan_url = f"https://www.jalan.net/{match['jalan']}/"
                             else:
-                                # DBになければキーワード検索ページへ
-                                jalan_url = f"https://www.jalan.net/searches/results/index.php?keyword={search_enc}"
+                                # ✅ 修正：バリューコマースの余計なパラメータが付いてもエラーにならない /yad/ 形式に変更
+                                jalan_url = f"https://www.jalan.net/yad/?keyword={search_enc}"
 
                             # Yahoo!リンクの作成
                             if match and match['yahoo']:
-                                # DBに '00902459' と入っていればそのまま直行URLにする
                                 yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo']}/?ppc=2"
                             else:
+                                # Yahooも同様に検索エンドポイントを整理
                                 yahoo_url = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
 
                             hotels.append({
@@ -118,5 +118,4 @@ def index():
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # Render等の環境に合わせてポートを設定
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
