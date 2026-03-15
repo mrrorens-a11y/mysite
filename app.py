@@ -18,6 +18,7 @@ def format_distance(m):
     if m is None: return ""
     try:
         m = float(m)
+        # 0.5kmではなく500mと表示する直感的なフォーマット
         return f"{int(m)}m" if m < 1000 else f"{round(m/1000, 1)}km"
     except: return ""
 
@@ -55,30 +56,28 @@ def index():
                             info = h["hotel"][0]["hotelBasicInfo"]
                             name = info.get("hotelName", "")
                             
+                            # 楽天ホテルID（将来のじゃらんID名寄せ用キー）
+                            rakuten_id = info.get("hotelNo")
+                            
                             # --- ゆるめ検索用：宿名から（）や【】などの注釈を消す ---
                             clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
-                            # 宿名(きれい)と都道府県で検索ワード作成
                             search_keyword = f"{clean_name} {info.get('address1', '')}"
                             search_enc = urllib.parse.quote(search_keyword)
-                            # --------------------------------------------------
 
-                            # じゃらん：検索用URL形式
-                            jalan_link = f"https://www.jalan.net/uw/uwp2011/uww2011init.do?keyword={search_enc}&stayYear=&stayMonth=&stayDay=&stayCount=1&roomCount=1&adultNum=2&distCd=01"
-                            
-                            # Yahoo!トラベル
-                            yahoo_link = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}&adults=2"
+                            # じゃらん：【最新エンドポイントへ修正】
+                            jalan_link = f"https://www.jalan.net/searches/results/index.php?keyword={search_enc}"
 
                             hotels.append({
-                                "hotelName":        name,
-                                "hotelImageUrl":    info.get("hotelImageUrl"),
-                                "address1":         info.get("address1", ""),
-                                "address2":         info.get("address2", ""),
-                                "hotelMinCharge":   info.get("hotelMinCharge"),
+                                "hotelNo":         rakuten_id,
+                                "hotelName":       name,
+                                "hotelImageUrl":   info.get("hotelImageUrl"),
+                                "address1":        info.get("address1", ""),
+                                "address2":        info.get("address2", ""),
+                                "hotelMinCharge":  info.get("hotelMinCharge"),
                                 "display_distance": format_distance(info.get("searchDistance")),
-                                "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_url":        jalan_link,
-                                "yahoo_url":        yahoo_link,
-                                "booking_url":      f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
+                                "target_url":      info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                                "jalan_url":       jalan_link,
+                                "booking_url":     f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                             })
             except Exception as e:
                 print("SYSTEM ERROR:", e)

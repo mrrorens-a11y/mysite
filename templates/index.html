@@ -7,7 +7,6 @@
     <title>tomarun | 宿泊比較</title>
     <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
 
-    <!-- バリューコマース LinkSwitch：全リンクを自動でアフィリエイトリンクに変換 -->
     <script type="text/javascript" language="javascript">var vc_pid = "892564859";</script>
     <script type="text/javascript" src="//aml.valuecommerce.com/vcdal.js" async></script>
 
@@ -84,7 +83,6 @@
         .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; }
         .hotel-address { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
 
-        /* OTAボタン3列 */
         .ota-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -100,27 +98,17 @@
             border-radius: 12px;
             padding: 10px 6px;
             gap: 4px;
+            transition: opacity 0.2s;
         }
-        .ota-btn .ota-name { font-size: 11px; font-weight: 700; color: white; }
-        .ota-btn .ota-price { font-size: 13px; font-weight: 700; color: white; }
+        .ota-btn:active { opacity: 0.7; }
+        .ota-btn .ota-name { font-size: 10px; font-weight: 700; color: white; opacity: 0.9; }
+        .ota-btn .ota-price { font-size: 12px; font-weight: 700; color: white; }
+        
         .ota-btn.rakuten  { background: #bf0000; }
         .ota-btn.jalan    { background: #ff7e00; }
-        .ota-btn.yahoo    { background: #ff0033; }
+        .ota-btn.booking  { background: #003580; }
 
-        /* サブリンク */
-        .sub-links {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 12px;
-        }
-        .sub-link {
-            font-size: 12px;
-            color: var(--apple-blue);
-            text-decoration: none;
-            font-weight: 500;
-        }
+        .sub-links { text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
     </style>
 </head>
 <body>
@@ -151,7 +139,6 @@
                     {% if h.display_distance %} ／ {{ h.display_distance }}{% endif %}
                 </p>
 
-                <!-- OTA 3列ボタン -->
                 <div class="ota-grid">
                     <a href="{{ h.target_url }}" class="ota-btn rakuten" target="_blank" rel="noopener">
                         <span class="ota-name">楽天トラベル</span>
@@ -159,17 +146,12 @@
                     </a>
                     <a href="{{ h.jalan_url }}" class="ota-btn jalan" target="_blank" rel="noopener">
                         <span class="ota-name">じゃらんnet</span>
-                        <span class="ota-price">検索する</span>
+                        <span class="ota-price">空室を確認</span>
                     </a>
-                    <a href="{{ h.yahoo_url }}" class="ota-btn yahoo" target="_blank" rel="noopener">
-                        <span class="ota-name">Yahoo!トラベル</span>
-                        <span class="ota-price">検索する</span>
+                    <a href="{{ h.booking_url }}" class="ota-btn booking" target="_blank" rel="noopener">
+                        <span class="ota-name">Booking.com</span>
+                        <span class="ota-price">最安値を検索</span>
                     </a>
-                </div>
-
-                <!-- サブリンク -->
-                <div class="sub-links">
-                    <a href="{{ h.booking_url }}" class="sub-link" target="_blank" rel="noopener">🌍 Booking.com</a>
                 </div>
             </div>
         </div>
