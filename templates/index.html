@@ -83,6 +83,7 @@
         .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; }
         .hotel-address { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
 
+        /* OTAボタン3列 */
         .ota-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -101,14 +102,26 @@
             transition: opacity 0.2s;
         }
         .ota-btn:active { opacity: 0.7; }
-        .ota-btn .ota-name { font-size: 10px; font-weight: 700; color: white; opacity: 0.9; }
-        .ota-btn .ota-price { font-size: 12px; font-weight: 700; color: white; }
-        
+        .ota-btn .ota-name { font-size: 11px; font-weight: 700; color: white; }
+        .ota-btn .ota-price { font-size: 11px; font-weight: 700; color: white; opacity: 0.9; }
         .ota-btn.rakuten  { background: #bf0000; }
         .ota-btn.jalan    { background: #ff7e00; }
-        .ota-btn.booking  { background: #003580; }
+        .ota-btn.yahoo    { background: #ff0033; }
 
-        .sub-links { text-align: center; border-top: 1px solid #eee; padding-top: 12px; }
+        /* サブリンク */
+        .sub-links {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 12px;
+        }
+        .sub-link {
+            font-size: 12px;
+            color: var(--apple-blue);
+            text-decoration: none;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body>
@@ -144,14 +157,20 @@
                         <span class="ota-name">楽天トラベル</span>
                         <span class="ota-price">{% if h.hotelMinCharge %}¥{{ "{:,}".format(h.hotelMinCharge) }}〜{% else %}確認する{% endif %}</span>
                     </a>
-                    <a href="{{ h.jalan_url }}" class="ota-btn jalan" target="_blank" rel="noopener">
+                    
+                    <a href="{{ h.jalan_url }}" class="ota-btn jalan vc_no_linkswitch" target="_blank" rel="noopener">
                         <span class="ota-name">じゃらんnet</span>
-                        <span class="ota-price">空室を確認</span>
+                        <span class="ota-price">公式サイト</span>
                     </a>
-                    <a href="{{ h.booking_url }}" class="ota-btn booking" target="_blank" rel="noopener">
-                        <span class="ota-name">Booking.com</span>
-                        <span class="ota-price">最安値を検索</span>
+                    
+                    <a href="{{ h.yahoo_url }}" class="ota-btn yahoo vc_no_linkswitch" target="_blank" rel="noopener">
+                        <span class="ota-name">Yahoo!トラベル</span>
+                        <span class="ota-price">公式サイト</span>
                     </a>
+                </div>
+
+                <div class="sub-links">
+                    <a href="{{ h.booking_url }}" class="sub-link" target="_blank" rel="noopener">🌍 Booking.com</a>
                 </div>
             </div>
         </div>
