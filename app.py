@@ -1,5 +1,6 @@
 import os
-import sqlite3
+import csv
+import math
 import requests
 import urllib.parse
 import re
@@ -7,45 +8,58 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# --- データベースからIDを取得する関数 ---
-def get_hotel_from_db(rakuten_id):
-    try:
-        conn = sqlite3.connect('tomarun.db')
-        conn.row_factory = sqlite3.Row 
-        cursor = conn.cursor()
-        search_id = str(rakuten_id)
-        cursor.execute('SELECT jalan_id, yahoo_id FROM hotels WHERE rakuten_id = ?', (search_id,))
-        row = cursor.fetchone()
-        conn.close()
-        if row:
-            return {"jalan": row["jalan_id"], "yahoo": row["yahoo_id"]}
-    except Exception as e:
-        print(f"DB Error: {e}")
-    return None
+# --- 1. CSVデータの読み込み関数 ---
+def load_hotel_db():
+    hotels_db = {}
+    if os.path.exists('hotels.csv'):
+        with open('hotels.csv', mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # 楽天IDをキーにしてデータを格納
+                hotels_db[row['rakuten_id']] = row
+    return hotels_db
 
-# --- 距離の表示を「500m」や「1.2km」にする関数 ---
-def format_distance(m):
-    if m is None or m == "": return ""
-    try:
-        m = float(m)
-        if m < 1000:
-            return f"{int(m)}m"  # 1000m未満はメートル表示
-        else:
-            return f"{round(m/1000, 1)}km" # 1000m以上はキロメートル表示
-    except:
-        return ""
+def load_destinations():
+    destinations = []
+    if os.path.exists('destinations.csv'):
+        with open('destinations.csv', mode='r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                destinations.append(row)
+    return destinations
+
+# --- 2. 距離計算ロジック ---
+def get_distance(lat1, lng1, lat2, lng2):
+    if not all([lat1, lng1, lat2, lng2]): return None
+    R = 6371.0 # 地球の半径km
+    r_lat1, r_lng1, r_lat2, r_lng2 = map(math.radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
+    d_lat = r_lat2 - r_lat1
+    d_lng = r_lng2 - r_lng1
+    a = math.sin(d_lat / 2)**2 + math.cos(r_lat1) * math.cos(r_lat2) * math.sin(d_lng / 2)**2
+    return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+def format_distance(dist_km):
+    if dist_km is None: return ""
+    if dist_km < 1:
+        return f"{int(dist_km * 1000)}m"
+    else:
+        return f"{round(dist_km, 1)}km"
 
 # 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
-RAKUTEN_API_URL      = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
-    hotels  = []
+    hotels = []
     keyword = ""
+    
+    # データを最新のCSVからロード
+    hotel_db = load_hotel_db()
+    dest_db = load_destinations()
 
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
@@ -59,58 +73,47 @@ def index():
                 "keyword":       keyword,
                 "hits":          15
             }
-
-            headers = {
-                "referer":    SITE_URL + "/",
-                "origin":     SITE_URL,
-                "user-agent": "Mozilla/5.0",
-                "accept":     "application/json"
-            }
+            headers = {"referer": SITE_URL + "/", "user-agent": "Mozilla/5.0"}
 
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
-                    if "hotels" in data:
-                        for h in data["hotels"]:
-                            info = h["hotel"][0]["hotelBasicInfo"]
-                            name = info.get("hotelName", "")
-                            rakuten_id = str(info.get("hotelNo"))
-                            
-                            # 距離データの取得
-                            raw_dist = info.get("searchDistance")
-                            display_dist = format_distance(raw_dist)
+                    for h in data.get("hotels", []):
+                        info = h["hotel"][0]["hotelBasicInfo"]
+                        rakuten_id = str(info.get("hotelNo"))
+                        
+                        # --- CSVからマッチング ---
+                        match = hotel_db.get(rakuten_id)
+                        
+                        # 距離計算（目的地DBの1番目との距離を計算）
+                        dist_str = ""
+                        dest_name = ""
+                        if match and match['lat'] and dest_db:
+                            dist_km = get_distance(match['lat'], match['lng'], dest_db[0]['lat'], dest_db[0]['lng'])
+                            dist_str = format_distance(dist_km)
+                            dest_name = dest_db[0]['name']
 
-                            clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
-                            search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
+                        # URL生成
+                        clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', info.get("hotelName", "")).strip()
+                        search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
 
-                            match = get_hotel_from_db(rakuten_id)
-                            
-                            # デバッグログ
-                            print(f"--- DEBUG --- 宿名: {name} | 元の距離: {raw_dist} | 変換後: {display_dist}")
+                        jalan_url = f"https://www.jalan.net/{match['jalan_id']}/" if match and match.get('jalan_id') else f"https://www.jalan.net/yad/?keyword={search_enc}"
+                        yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo_id']}/?ppc=2" if match and match.get('yahoo_id') else f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
 
-                            # リンク生成
-                            if match and match['jalan']:
-                                jalan_url = f"https://www.jalan.net/{match['jalan']}/"
-                            else:
-                                jalan_url = f"https://www.jalan.net/yad/?keyword={search_enc}"
-
-                            if match and match['yahoo']:
-                                yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo']}/?ppc=2"
-                            else:
-                                yahoo_url = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
-
-                            hotels.append({
-                                "hotelName":       name,
-                                "hotelImageUrl":   info.get("hotelImageUrl"),
-                                "address":         f"{info.get('address1', '')}{info.get('address2', '')}",
-                                "hotelMinCharge":  info.get("hotelMinCharge"),
-                                "distance":        display_dist,
-                                "rakuten_url":     info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_url":       jalan_url,
-                                "yahoo_url":       yahoo_url,
-                                "booking_url":     f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
-                            })
+                        hotels.append({
+                            "hotelName": info.get("hotelName"),
+                            "hotelImageUrl": info.get("hotelImageUrl"),
+                            "address1": info.get("address1", ""),
+                            "address2": info.get("address2", ""),
+                            "hotelMinCharge": info.get("hotelMinCharge"),
+                            "display_distance": dist_str,
+                            "dest_name": dest_name, # 目的地名を追加
+                            "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                            "jalan_url": jalan_url,
+                            "yahoo_url": yahoo_url,
+                            "booking_url": f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
+                        })
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
