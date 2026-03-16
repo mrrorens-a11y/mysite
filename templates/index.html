@@ -3,175 +3,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="referrer" content="no-referrer-when-downgrade">
-    <title>tomarun | 宿泊比較</title>
-    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
-
-    <script type="text/javascript" language="javascript">var vc_pid = "892564859";</script>
-    <script type="text/javascript" src="//aml.valuecommerce.com/vcdal.js" async></script>
-
+    <title>とまるん - 宿検索</title>
     <style>
         :root {
             --apple-bg: #f5f5f7;
-            --text-main: #1d1d1f;
-            --text-sub: #86868b;
-            --price-red: #d6001c;
-            --apple-blue: #0071e3;
-            --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            --apple-card: #ffffff;
+            --apple-text: #1d1d1f;
+            --apple-sub: #86868b;
+            --accent: #0071e3;
         }
-        * { box-sizing: border-box; }
         body {
-            font-family: 'Noto Sans JP', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--apple-bg);
-            margin: 0 auto;
-            max-width: 500px;
-            color: var(--text-main);
-            -webkit-font-smoothing: antialiased;
+            color: var(--apple-text);
+            margin: 0; padding: 20px;
         }
-        header {
-            background: rgba(255,255,255,0.85);
-            backdrop-filter: blur(20px);
-            padding: 16px;
-            text-align: center;
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-        .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
-        .logo { font-family: 'Kiwi Maru', serif; font-size: 2.2rem; margin: 0; color: var(--text-main); }
-        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
-
-        .search-section { padding: 25px 20px 10px; }
-        .search-area {
-            display: flex;
-            gap: 8px;
-            background: white;
-            padding: 6px;
-            border-radius: 14px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            border: 1px solid #d2d2d7;
+        .container { max-width: 600px; margin: 0 auto; }
+        .search-box {
+            background: var(--apple-card);
+            padding: 20px;
+            border-radius: 18px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 30px;
         }
         input {
-            flex: 1;
-            padding: 10px 15px;
-            border: none;
-            font-size: 16px;
-            outline: none;
-            background: transparent;
-        }
-        button#search-btn {
-            background: var(--text-main);
-            color: white;
-            border: none;
-            padding: 0 20px;
+            width: 70%; padding: 12px;
+            border: 1px solid #d2d2d7;
             border-radius: 10px;
-            font-weight: 600;
-            cursor: pointer;
-            font-size: 15px;
+            font-size: 16px; outline: none;
         }
-
+        button.search-btn {
+            background: var(--apple-text);
+            color: white; border: none;
+            padding: 12px 20px; border-radius: 10px;
+            font-weight: 600; cursor: pointer;
+        }
         .hotel-card {
-            background: white;
-            border-radius: 20px;
-            margin: 15px;
-            overflow: hidden;
-            box-shadow: var(--card-shadow);
+            background: var(--apple-card);
+            border-radius: 22px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            transition: transform 0.3s ease;
         }
-        .hotel-img { width: 100%; height: 220px; object-fit: cover; display: block; }
-        .hotel-info { padding: 18px 20px 20px; }
-        .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 4px; line-height: 1.4; }
-        .hotel-address { font-size: 12px; color: var(--text-sub); margin-bottom: 14px; }
-
-        /* OTAボタン3列 */
-        .ota-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-            margin-bottom: 14px;
+        .hotel-card img {
+            width: 100%; border-radius: 14px;
+            aspect-ratio: 16 / 9; object-fit: cover;
         }
+        .hotel-name {
+            font-size: 20px; font-weight: 700;
+            margin: 15px 0 5px; line-height: 1.3;
+        }
+        .distance-tag {
+            display: inline-block;
+            background: #fff1f2; color: #e63946;
+            padding: 4px 10px; border-radius: 6px;
+            font-size: 14px; font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .price-label {
+            font-size: 14px; color: var(--apple-sub);
+        }
+        .btn-stack {
+            display: flex; flex-direction: column; gap: 10px; margin-top: 20px;
+        }
+        .btn-stack a { text-decoration: none; }
         .ota-btn {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            border-radius: 12px;
-            padding: 10px 6px;
-            gap: 4px;
-            transition: opacity 0.2s;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 20px; border-radius: 12px;
+            font-weight: 600; font-size: 15px;
+            border: 1px solid #d2d2d7; background: #fff; color: var(--apple-text);
         }
-        .ota-btn:active { opacity: 0.7; }
-        .ota-btn .ota-name { font-size: 11px; font-weight: 700; color: white; }
-        .ota-btn .ota-price { font-size: 11px; font-weight: 700; color: white; opacity: 0.9; }
-        .ota-btn.rakuten  { background: #bf0000; }
-        .ota-btn.jalan    { background: #ff7e00; }
-        .ota-btn.yahoo    { background: #ff0033; }
-
-        /* サブリンク */
-        .sub-links {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            border-top: 1px solid #eee;
-            padding-top: 12px;
-        }
-        .sub-link {
-            font-size: 12px;
-            color: var(--apple-blue);
-            text-decoration: none;
-            font-weight: 500;
-        }
+        .ota-btn:hover { background: #f5f5f7; }
+        .ota-btn .price { color: var(--accent); font-size: 16px; }
     </style>
 </head>
 <body>
-    <header>
-        <a href="/" class="logo-container">
-            <h1 class="logo">tomarun</h1>
-            <span class="sub-logo">TRAVEL COMPARISON</span>
-        </a>
-    </header>
+    <div class="container">
+        <div class="search-box">
+            <form method="POST">
+                <input type="text" name="keyword" placeholder="例：美ら海水族館" value="{{ keyword }}">
+                <button type="submit" class="search-btn">検索</button>
+            </form>
+        </div>
 
-    <div class="search-section">
-        <form class="search-area" method="POST">
-            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}">
-            <button type="submit" id="search-btn">検索</button>
-        </form>
-    </div>
-
-    <div class="hotel-container">
-        {% for h in hotels %}
+        {% for hotel in hotels %}
         <div class="hotel-card">
-            {% if h.hotelImageUrl %}
-            <img src="{{ h.hotelImageUrl }}" class="hotel-img" alt="{{ h.hotelName }}" loading="lazy">
+            <img src="{{ hotel.hotelImageUrl }}" alt="{{ hotel.hotelName }}">
+            <div class="hotel-name">{{ hotel.hotelName }}</div>
+            
+            {% if hotel.distance %}
+            <div class="distance-tag">目的地から {{ hotel.distance }}</div>
             {% endif %}
-            <div class="hotel-info">
-                <h2 class="hotel-name">{{ h.hotelName }}</h2>
-                <p class="hotel-address">
-                    {{ h.address1 }}{{ h.address2 }}
-                    {% if h.display_distance %} ／ {{ h.display_distance }}{% endif %}
-                </p>
 
-                <div class="ota-grid">
-                    <a href="{{ h.target_url }}" class="ota-btn rakuten" target="_blank" rel="noopener">
-                        <span class="ota-name">楽天トラベル</span>
-                        <span class="ota-price">{% if h.hotelMinCharge %}¥{{ "{:,}".format(h.hotelMinCharge) }}〜{% else %}確認する{% endif %}</span>
-                    </a>
-                    
-                    <a href="{{ h.jalan_url }}" class="ota-btn jalan vc_no_linkswitch" target="_blank" rel="noopener">
-                        <span class="ota-name">じゃらんnet</span>
-                        <span class="ota-price">公式サイト</span>
-                    </a>
-                    
-                    <a href="{{ h.yahoo_url }}" class="ota-btn yahoo vc_no_linkswitch" target="_blank" rel="noopener">
-                        <span class="ota-name">Yahoo!トラベル</span>
-                        <span class="ota-price">公式サイト</span>
-                    </a>
-                </div>
+            <div class="price-label">最安料金目安: <span style="color:var(--apple-text); font-weight:600;">¥{{ hotel.hotelMinCharge or '---' }}〜</span></div>
 
-                <div class="sub-links">
-                    <a href="{{ h.booking_url }}" class="sub-link" target="_blank" rel="noopener">🌍 Booking.com</a>
-                </div>
+            <div class="btn-stack">
+                <a href="{{ hotel.rakuten_url }}" target="_blank" class="ota-btn">
+                    <span>楽天トラベル</span>
+                    <span class="price">¥{{ hotel.hotelMinCharge or '---' }}</span>
+                </a>
+                <a href="{{ hotel.jalan_url }}" target="_blank" class="ota-btn">
+                    <span>じゃらんnet</span>
+                    <span class="price">空室確認</span>
+                </a>
+                <a href="{{ hotel.yahoo_url }}" target="_blank" class="ota-btn">
+                    <span>Yahoo!トラベル</span>
+                    <span class="price">空室確認</span>
+                </a>
+                <a href="{{ hotel.booking_url }}" target="_blank" class="ota-btn">
+                    <span>Booking.com</span>
+                    <span class="price">空室確認</span>
+                </a>
             </div>
         </div>
         {% endfor %}

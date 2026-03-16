@@ -7,47 +7,40 @@ from flask import Flask, render_template, request
 
 app = Flask(__name__)
 
-# --- データベースからIDを取得する関数（修正版） ---
+# --- データベースからIDを取得する関数 ---
 def get_hotel_from_db(rakuten_id):
     try:
         conn = sqlite3.connect('tomarun.db')
-        # ✅ カラム名でデータを指定できる設定を追加（これがないと match['jalan'] でエラーになります）
         conn.row_factory = sqlite3.Row 
         cursor = conn.cursor()
-        
-        # 楽天IDを文字列に変換して確実に検索
         search_id = str(rakuten_id)
         cursor.execute('SELECT jalan_id, yahoo_id FROM hotels WHERE rakuten_id = ?', (search_id,))
-        
         row = cursor.fetchone()
         conn.close()
-        
         if row:
-            # 取得したデータを辞書形式で返す
             return {"jalan": row["jalan_id"], "yahoo": row["yahoo_id"]}
-            
     except Exception as e:
         print(f"DB Error: {e}")
     return None
+
+# --- 距離の表示を「500m」や「1.2km」にする関数 ---
+def format_distance(m):
+    if m is None or m == "": return ""
+    try:
+        m = float(m)
+        if m < 1000:
+            return f"{int(m)}m"  # 1000m未満はメートル表示
+        else:
+            return f"{round(m/1000, 1)}km" # 1000m以上はキロメートル表示
+    except:
+        return ""
 
 # 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
-
-RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-
-def format_distance(m):
-    if m is None: return ""
-    try:
-        m = float(m)
-        if m < 1000:
-            return f"{int(m)}m"
-        else:
-            return f"{round(m/1000, 1)}km"
-    except:
-        return ""
+RAKUTEN_API_URL      = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -84,28 +77,24 @@ def index():
                             name = info.get("hotelName", "")
                             rakuten_id = str(info.get("hotelNo"))
                             
+                            # 距離データの取得
+                            raw_dist = info.get("searchDistance")
+                            display_dist = format_distance(raw_dist)
+
                             clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
                             search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
 
-                            # --- 【重要】DBから個別IDを呼び出す ---
                             match = get_hotel_from_db(rakuten_id)
-
-                            # --- デバッグログ ---
-                            print(f"--- DEBUG START ---")
-                            print(f"楽天ID: {rakuten_id} | 宿名: {name}")
-                            print(f"DBからの取得結果: {match}")
-                            if match:
-                                print(f"生成される予定のじゃらんURL: https://www.jalan.net/{match['jalan']}/")
-                            print(f"--- DEBUG END ---")
                             
-                            # じゃらんリンクの作成
+                            # デバッグログ
+                            print(f"--- DEBUG --- 宿名: {name} | 元の距離: {raw_dist} | 変換後: {display_dist}")
+
+                            # リンク生成
                             if match and match['jalan']:
-                                # ✅ 末尾にスラッシュを付けた直行URLを作成
                                 jalan_url = f"https://www.jalan.net/{match['jalan']}/"
                             else:
                                 jalan_url = f"https://www.jalan.net/yad/?keyword={search_enc}"
 
-                            # Yahoo!リンクの作成
                             if match and match['yahoo']:
                                 yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo']}/?ppc=2"
                             else:
@@ -114,11 +103,10 @@ def index():
                             hotels.append({
                                 "hotelName":       name,
                                 "hotelImageUrl":   info.get("hotelImageUrl"),
-                                "address1":        info.get("address1", ""),
-                                "address2":        info.get("address2", ""),
+                                "address":         f"{info.get('address1', '')}{info.get('address2', '')}",
                                 "hotelMinCharge":  info.get("hotelMinCharge"),
-                                "display_distance": format_distance(info.get("searchDistance")),
-                                "target_url":      info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                                "distance":        display_dist,
+                                "rakuten_url":     info.get("affiliateUrl") or info.get("hotelInformationUrl"),
                                 "jalan_url":       jalan_url,
                                 "yahoo_url":       yahoo_url,
                                 "booking_url":     f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
