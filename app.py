@@ -10,10 +10,8 @@ app = Flask(__name__)
 # --- データベースからIDを取得する関数 ---
 def get_hotel_from_db(rakuten_id):
     try:
-        # add_hotel.pyで作られたデータベースファイルを参照します
         conn = sqlite3.connect('tomarun.db')
         cursor = conn.cursor()
-        # 楽天IDを元に、じゃらんIDとYahooIDを検索
         cursor.execute('SELECT jalan_id, yahoo_id FROM hotels WHERE rakuten_id = ?', (str(rakuten_id),))
         row = cursor.fetchone()
         conn.close()
@@ -23,7 +21,7 @@ def get_hotel_from_db(rakuten_id):
         print(f"DB Error: {e}")
     return None
 
-# 環境変数（Renderなどの設定から取得）
+# 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
@@ -31,7 +29,6 @@ SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.
 
 RAKUTEN_API_URL = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# 距離の表示をわかりやすく変換（500m / 1.2km など）
 def format_distance(m):
     if m is None: return ""
     try:
@@ -78,24 +75,26 @@ def index():
                             name = info.get("hotelName", "")
                             rakuten_id = str(info.get("hotelNo"))
                             
-                            # DBにない場合の検索ワードクレンジング（バックアップ用）
                             clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', name).strip()
                             search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
 
-                            # --- 【重要】DBから個別IDを呼び出す ---
+                            # --- 【デバッグログ追加開始】 ---
                             match = get_hotel_from_db(rakuten_id)
+
+                            print(f"--- DEBUG START ---")
+                            print(f"楽天ID: {rakuten_id} | 宿名: {name}")
+                            print(f"DBからの取得結果: {match}")
+                            if match:
+                                print(f"生成される予定のじゃらんURL: https://www.jalan.net/{match['jalan']}/")
+                            print(f"--- DEBUG END ---")
+                            # --- 【デバッグログ追加終了】 ---
                             
-                            # じゃらんリンクの作成
                             if match and match['jalan']:
-                                # DBに 'yad335007' と入っていればそのまま直結URLにする
                                 jalan_url = f"https://www.jalan.net/{match['jalan']}/"
                             else:
-                                # ✅ 修正：バリューコマースのパラメータが付いてもエラーにならない /yad/ 形式に変更
                                 jalan_url = f"https://www.jalan.net/yad/?keyword={search_enc}"
 
-                            # Yahoo!リンクの作成
                             if match and match['yahoo']:
-                                # DBに '00902459' と入っていればそのまま直行URLにする
                                 yahoo_url = f"https://travel.yahoo.co.jp/{match['yahoo']}/?ppc=2"
                             else:
                                 yahoo_url = f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
@@ -118,5 +117,4 @@ def index():
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
-    # Render等の環境に合わせてポートを設定
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
