@@ -10,14 +10,9 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- CSVデータの読み込みと結合 ---
+# --- CSVデータの読み込みと結合（縦並びデータ対応版） ---
 def load_hotel_db():
-    """
-    1. hotels.csv (基本情報)
-    2. hotel_otas.csv (各社ID対応)
-    を読み込み、楽天IDをキーにした一つの辞書に統合する
-    """
-    raw_hotels = {}  # id -> {name, lat, lng}
+    raw_hotels = {}  # id -> {name, lat, lng, ...}
     combined_db = {} # rakuten_id -> {全情報}
 
     # ① hotels.csv の読み込み
@@ -30,22 +25,34 @@ def load_hotel_db():
                 if h_id:
                     raw_hotels[h_id] = {k: v.strip() for k, v in row.items()}
     
-    # ② hotel_otas.csv の読み込みと結合
+    # ② hotel_otas.csv の読み込み（縦並びを横並びに変換しながら結合）
+    # hotel_idごとに各OTAのIDを一時的にまとめる辞書
+    ota_map = {} # { '1': {'rakuten_id': '15062', 'jalan_id': 'yad346870', ...} }
+    
     otas_path = os.path.join(BASE_DIR, 'hotel_otas.csv')
     if os.path.exists(otas_path):
         with open(otas_path, mode='r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 h_id = row.get('hotel_id', '').strip()
-                r_id = row.get('rakuten_id', '').strip()
+                ota_type = row.get('ota', '').strip().lower() # rakuten, jalan, yahoo
+                ota_id = row.get('ota_id', '').strip()
                 
-                # hotels.csvに存在するホテルなら結合
-                if h_id in raw_hotels and r_id:
-                    hotel_info = raw_hotels[h_id].copy()
-                    hotel_info.update({k: v.strip() for k, v in row.items()})
-                    combined_db[r_id] = hotel_info
+                if h_id not in ota_map:
+                    ota_map[h_id] = {}
+                
+                # 'rakuten' を 'rakuten_id' というキー名で保存
+                ota_map[h_id][f"{ota_type}_id"] = ota_id
+
+    # ③ 2つを結合して、楽天IDをキーにしたメインDBを作成
+    for h_id, ids in ota_map.items():
+        r_id = ids.get('rakuten_id')
+        if r_id and h_id in raw_hotels:
+            hotel_info = raw_hotels[h_id].copy()
+            hotel_info.update(ids) # jalan_id や yahoo_id も合体
+            combined_db[r_id] = hotel_info
     
-    print(f"✅ hotel_db ロード完了: {len(combined_db)} 件 (楽天ID紐付け済み)")
+    print(f"✅ hotel_db ロード完了: {len(combined_db)} 件 (縦並びデータから結合成功)")
     return combined_db
 
 def load_destinations():
@@ -58,7 +65,7 @@ def load_destinations():
                 destinations.append({k: v.strip() for k, v in row.items()})
     return destinations
 
-# --- 距離計算 ---
+# --- 距離計算（変更なし） ---
 def get_distance(lat1, lng1, lat2, lng2):
     try:
         if not all([lat1, lng1, lat2, lng2]): return None
@@ -68,11 +75,9 @@ def get_distance(lat1, lng1, lat2, lng2):
         d_lng = r_lng2 - r_lng1
         a = math.sin(d_lat / 2)**2 + math.cos(r_lat1) * math.cos(r_lat2) * math.sin(d_lng / 2)**2
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    except:
-        return None
+    except: return None
 
 def format_distance_display(dist_km):
-    """新仕様: 1km未満はm表示"""
     if dist_km is None: return ""
     return f"{int(dist_km * 1000)}m" if dist_km < 1.0 else f"{round(dist_km, 1)}km"
 
@@ -81,7 +86,6 @@ RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 RAKUTEN_API_URL      = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
-# 起動時に一度だけロード
 hotel_db = load_hotel_db()
 dest_db  = load_destinations()
 
@@ -89,67 +93,46 @@ dest_db  = load_destinations()
 def index():
     hotels  = []
     keyword = ""
-
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         if keyword:
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "affiliateId":   RAKUTEN_AFFILIATE_ID,
-                "format":        "json",
-                "keyword":       keyword,
-                "hits":          15
-            }
+            params = {"applicationId": RAKUTEN_APP_ID, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "keyword": keyword, "hits": 15}
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     for h in data.get("hotels", []):
-                        info       = h["hotel"][0]["hotelBasicInfo"]
+                        info = h["hotel"][0]["hotelBasicInfo"]
                         rakuten_id = str(info.get("hotelNo"))
-                        
-                        # クレンジング後の名前（検索フォールバック用）
                         clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', info.get("hotelName", "")).strip()
                         search_enc = urllib.parse.quote(clean_name)
 
-                        # CSVデータベース（結合済み）から情報を検索
                         csv_match = hotel_db.get(rakuten_id, {})
-
-                        # 距離計算（CSVの座標を使用）
                         dist_str = ""
                         dest_name = ""
                         if csv_match.get('lat') and dest_db:
-                            dist_km = get_distance(csv_match['lat'], csv_match['lng'],
-                                                   dest_db[0]['lat'], dest_db[0]['lng'])
+                            dist_km = get_distance(csv_match['lat'], csv_match['lng'], dest_db[0]['lat'], dest_db[0]['lng'])
                             dist_str = format_distance_display(dist_km)
                             dest_name = dest_db[0]['name']
 
-                        # 各社URL生成（IDがあれば直接、なければ検索）
                         j_id = csv_match.get('jalan_id')
-                        jalan_url = f"https://www.jalan.net/{j_id}/" if j_id else f"https://www.jalan.net/yad/?keyword={search_enc}"
-
                         y_id = csv_match.get('yahoo_id')
-                        yahoo_url = f"https://travel.yahoo.co.jp/{y_id}/?ppc=2" if y_id else f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}"
-
                         b_id = csv_match.get('booking_id')
-                        booking_url = f"https://www.booking.com/hotel/jp/{b_id}.ja.html" if b_id else f"https://www.booking.com/searchresults.ja.html?ss={search_enc}"
 
                         hotels.append({
-                            "hotelName":        info.get("hotelName"),
-                            "hotelImageUrl":    info.get("hotelImageUrl"),
-                            "address1":         info.get("address1", ""),
-                            "address2":         info.get("address2", ""),
-                            "hotelMinCharge":   info.get("hotelMinCharge"),
+                            "hotelName": info.get("hotelName"),
+                            "hotelImageUrl": info.get("hotelImageUrl"),
+                            "address1": info.get("address1", ""),
+                            "address2": info.get("address2", ""),
+                            "hotelMinCharge": info.get("hotelMinCharge"),
                             "display_distance": dist_str,
-                            "dest_name":        dest_name,
-                            "target_url":       info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                            "jalan_url":        jalan_url,
-                            "yahoo_url":        yahoo_url,
-                            "booking_url":      booking_url,
+                            "dest_name": dest_name,
+                            "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
+                            "jalan_url": f"https://www.jalan.net/{j_id}/" if j_id else f"https://www.jalan.net/yad/?keyword={search_enc}",
+                            "yahoo_url": f"https://travel.yahoo.co.jp/{y_id}/?ppc=2" if y_id else f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
+                            "booking_url": f"https://www.booking.com/hotel/jp/{b_id}.ja.html" if b_id else f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                         })
-            except Exception as e:
-                print("SYSTEM ERROR:", e)
-
+            except Exception as e: print("SYSTEM ERROR:", e)
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
 if __name__ == "__main__":
