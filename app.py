@@ -108,8 +108,12 @@ def index():
             print(f"🔑 AFFILIATE_ID: 空={not RAKUTEN_AFFILIATE_ID}")
             # =======================
 
+            headers = {
+                "user-agent": "Mozilla/5.0",
+                "referer":    SITE_URL,
+            }
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
+                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
                 print(f"📡 APIステータス: {res.status_code}")
 
                 if res.status_code == 200:
