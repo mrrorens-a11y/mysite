@@ -10,12 +10,10 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- CSVデータの読み込みと結合 ---
 def load_hotel_db():
-    raw_hotels = {}   # id -> {name, lat, lng, ...}
-    combined_db = {}  # rakuten_id -> {全情報}
+    raw_hotels = {}
+    combined_db = {}
 
-    # ① hotels.csv の読み込み (utf-8-sig でBOM対応)
     hotels_path = os.path.join(BASE_DIR, 'hotels.csv')
     if os.path.exists(hotels_path):
         with open(hotels_path, mode='r', encoding='utf-8-sig') as f:
@@ -24,11 +22,8 @@ def load_hotel_db():
                 h_id = row.get('id', '').strip()
                 if h_id:
                     raw_hotels[h_id] = {k: v.strip() for k, v in row.items()}
-    else:
-        print(f"⚠️ hotels.csv が見つかりません: {hotels_path}")
 
-    # ② hotel_otas.csv の読み込み (utf-8-sig でBOM対応)
-    ota_map = {}  # hotel_id -> { 'rakuten_id': '...', 'jalan_id': '...', ... }
+    ota_map = {}
     otas_path = os.path.join(BASE_DIR, 'hotel_otas.csv')
     if os.path.exists(otas_path):
         with open(otas_path, mode='r', encoding='utf-8-sig') as f:
@@ -41,10 +36,7 @@ def load_hotel_db():
                     if h_id not in ota_map:
                         ota_map[h_id] = {}
                     ota_map[h_id][f"{ota}_id"] = ota_id
-    else:
-        print(f"⚠️ hotel_otas.csv が見つかりません: {otas_path}")
 
-    # ③ 結合: rakuten_id をキーにしたメインDBを作成
     for h_id, ids in ota_map.items():
         r_id = ids.get('rakuten_id')
         if r_id and h_id in raw_hotels:
@@ -64,12 +56,9 @@ def load_destinations():
             reader = csv.DictReader(f)
             for row in reader:
                 destinations.append({k: v.strip() for k, v in row.items()})
-    else:
-        print(f"⚠️ destinations.csv が見つかりません: {csv_path}")
     return destinations
 
 
-# --- 距離計算 ---
 def get_distance(lat1, lng1, lat2, lng2):
     try:
         if not all([lat1, lng1, lat2, lng2]): return None
@@ -86,9 +75,10 @@ def format_distance_display(dist_km):
     return f"{int(dist_km * 1000)}m" if dist_km < 1.0 else f"{round(dist_km, 1)}km"
 
 
-# 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
+RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
+SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
 RAKUTEN_API_URL      = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 hotel_db = load_hotel_db()
@@ -104,16 +94,36 @@ def index():
         if keyword:
             params = {
                 "applicationId": RAKUTEN_APP_ID,
+                "accessKey":     RAKUTEN_ACCESS_KEY,
                 "affiliateId":   RAKUTEN_AFFILIATE_ID,
                 "format":        "json",
                 "keyword":       keyword,
                 "hits":          15,
             }
+
+            # ===== デバッグログ =====
+            print(f"🔍 検索キーワード: {keyword}")
+            print(f"🔑 APP_ID: '{RAKUTEN_APP_ID[:6]}...' (空={not RAKUTEN_APP_ID})")
+            print(f"🔑 ACCESS_KEY: 空={not RAKUTEN_ACCESS_KEY}")
+            print(f"🔑 AFFILIATE_ID: 空={not RAKUTEN_AFFILIATE_ID}")
+            # =======================
+
             try:
                 res = requests.get(RAKUTEN_API_URL, params=params, timeout=10)
+                print(f"📡 APIステータス: {res.status_code}")
+
                 if res.status_code == 200:
                     data = res.json()
-                    for h in data.get("hotels", []):
+                    print(f"📦 APIレスポンスキー: {list(data.keys())}")
+
+                    # エラーレスポンスの確認
+                    if "error" in data:
+                        print(f"❌ APIエラー: {data.get('error')} / {data.get('error_description')}")
+
+                    hotel_list = data.get("hotels", [])
+                    print(f"🏨 取得ホテル数: {len(hotel_list)}")
+
+                    for h in hotel_list:
                         info       = h["hotel"][0]["hotelBasicInfo"]
                         rakuten_id = str(info.get("hotelNo", ""))
                         clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', info.get("hotelName", "")).strip()
@@ -144,8 +154,11 @@ def index():
                             "yahoo_url":        f"https://travel.yahoo.co.jp/{y_id}/?ppc=2" if y_id else f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
                             "booking_url":      f"https://www.booking.com/hotel/jp/{b_id}.ja.html" if b_id else f"https://www.booking.com/searchresults.ja.html?ss={search_enc}",
                         })
+                else:
+                    print(f"❌ HTTPエラー: {res.status_code} / {res.text[:200]}")
+
             except Exception as e:
-                print("SYSTEM ERROR:", e)
+                print(f"💥 SYSTEM ERROR: {type(e).__name__}: {e}")
 
     return render_template("index.html", hotels=hotels, keyword=keyword)
 
