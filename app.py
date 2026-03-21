@@ -72,7 +72,6 @@ RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
 SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.com").strip()
-RAKUTEN_API_URL      = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
 
 hotel_db = load_hotel_db()
 dest_db  = load_destinations()
@@ -89,20 +88,37 @@ def index():
             # --- 1 & 3: 目的地判別ロジック ---
             target_dest = None
             for d in dest_db:
-                # search_keysの中にキーワードが含まれているかチェック
                 keys = d.get('search_keys', '').split(',')
                 if any(k.strip() in keyword for k in keys) or keyword in d['name']:
                     target_dest = d
                     break
 
-            params = {
-                "applicationId": RAKUTEN_APP_ID,
-                "accessKey":     RAKUTEN_ACCESS_KEY,
-                "affiliateId":   RAKUTEN_AFFILIATE_ID,
-                "format":        "json",
-                "keyword":       keyword,
-                "hits":          21 # 21件に固定
-            }
+            # --- 目的地（座標）があるかどうかでAPIを切り替える ---
+            if target_dest and target_dest.get('lat') and target_dest.get('lng'):
+                # 座標検索 (SimpleHotelSearch)
+                api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
+                params = {
+                    "applicationId": RAKUTEN_APP_ID,
+                    "accessKey":     RAKUTEN_ACCESS_KEY,
+                    "affiliateId":   RAKUTEN_AFFILIATE_ID,
+                    "format":        "json",
+                    "latitude":      target_dest['lat'],
+                    "longitude":     target_dest['lng'],
+                    "searchRadius":  3.0, # 半径3km以内の宿を検索
+                    "datumType":     1,   # 世界測地系
+                    "hits":          21
+                }
+            else:
+                # キーワード検索 (KeywordHotelSearch)
+                api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
+                params = {
+                    "applicationId": RAKUTEN_APP_ID,
+                    "accessKey":     RAKUTEN_ACCESS_KEY,
+                    "affiliateId":   RAKUTEN_AFFILIATE_ID,
+                    "format":        "json",
+                    "keyword":       keyword,
+                    "hits":          21
+                }
 
             headers = {
                 "referer": SITE_URL + "/",
@@ -112,7 +128,7 @@ def index():
             }
 
             try:
-                res = requests.get(RAKUTEN_API_URL, params=params, headers=headers, timeout=10)
+                res = requests.get(api_url, params=params, headers=headers, timeout=10)
                 if res.status_code == 200:
                     data = res.json()
                     if "hotels" in data:

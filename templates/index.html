@@ -43,6 +43,10 @@
         .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
 
         .search-section { padding: 25px 20px 10px; }
+        
+        /* 検索とサジェストを包む枠 */
+        .autocomplete-wrapper { position: relative; width: 100%; }
+        
         .search-area {
             display: flex;
             gap: 8px;
@@ -51,6 +55,8 @@
             border-radius: 14px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
             border: 1px solid #d2d2d7;
+            position: relative;
+            z-index: 2;
         }
         input {
             flex: 1;
@@ -70,6 +76,31 @@
             cursor: pointer;
             font-size: 15px;
         }
+
+        /* カスタムサジェストのデザイン */
+        .suggest-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+            margin-top: 8px;
+            z-index: 1000;
+            overflow: hidden;
+            display: none; /* 初期状態は非表示 */
+            border: 1px solid #d2d2d7;
+        }
+        .suggest-item {
+            padding: 12px 16px;
+            font-size: 15px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .suggest-item:last-child { border-bottom: none; }
+        .suggest-item:hover, .suggest-item:active { background: #f5f5f7; }
 
         .hotel-card {
             background: white;
@@ -133,19 +164,16 @@
     </header>
 
     <div class="search-section">
-        <form class="search-area" method="POST">
-            <!-- 【追加箇所1】list="dest-list" と autocomplete="off" を追加 -->
-            <input type="text" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}" list="dest-list" autocomplete="off">
-            
-            <!-- 【追加箇所2】サジェスト用の候補リストを表示 -->
-            <datalist id="dest-list">
-                {% for d in destinations %}
-                <option value="{{ d.name }}">
-                {% endfor %}
-            </datalist>
-
-            <button type="submit" id="search-btn">検索</button>
-        </form>
+        <!-- datalistを削除し、divでラップ -->
+        <div class="autocomplete-wrapper">
+            <form class="search-area" id="search-form" method="POST">
+                <!-- idを追加し、list属性を削除 -->
+                <input type="text" id="search-input" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}" autocomplete="off">
+                <button type="submit" id="search-btn">検索</button>
+            </form>
+            <!-- カスタムサジェストの枠 -->
+            <div id="suggest-list" class="suggest-list"></div>
+        </div>
     </div>
 
     <div class="hotel-container">
@@ -158,7 +186,6 @@
                 <h2 class="hotel-name">{{ h.hotelName }}</h2>
                 <p class="hotel-address">
                     {{ h.address1 }}{{ h.address2 }}
-                    <!-- 【追加箇所3】距離データがある場合のみ ／ と距離を表示する -->
                     {% if h.display_distance %} ／ {{ h.display_distance }}{% endif %}
                 </p>
 
@@ -186,5 +213,59 @@
         </div>
         {% endfor %}
     </div>
+
+    <!-- 検索サジェスト用JavaScript -->
+    <script>
+        // Pythonから目的地データをJSONとして受け取る
+        const destinations = {{ destinations | tojson | safe }};
+        const searchInput = document.getElementById('search-input');
+        const suggestList = document.getElementById('suggest-list');
+        const searchForm = document.getElementById('search-form');
+
+        // 文字が入力されるたびに動く処理
+        searchInput.addEventListener('input', function() {
+            const val = this.value.trim().toLowerCase();
+            suggestList.innerHTML = ''; // 一旦リストを空にする
+
+            if (!val) {
+                suggestList.style.display = 'none';
+                return;
+            }
+
+            // 目的地名か検索キーに入力文字が含まれているものを探す
+            const matched = destinations.filter(d => {
+                const nameMatch = d.name.toLowerCase().includes(val);
+                const keysMatch = (d.search_keys || '').toLowerCase().includes(val);
+                return nameMatch || keysMatch;
+            });
+
+            // 候補が見つかったらリストを作って表示
+            if (matched.length > 0) {
+                matched.forEach(d => {
+                    const item = document.createElement('div');
+                    item.className = 'suggest-item';
+                    item.textContent = d.name;
+                    
+                    // クリックしたら入力欄に入れて自動検索
+                    item.onclick = function() {
+                        searchInput.value = d.name;
+                        suggestList.style.display = 'none';
+                        searchForm.submit();
+                    };
+                    suggestList.appendChild(item);
+                });
+                suggestList.style.display = 'block';
+            } else {
+                suggestList.style.display = 'none';
+            }
+        });
+
+        // 枠外をクリックしたらサジェストを閉じる
+        document.addEventListener('click', function(e) {
+            if (e.target !== searchInput) {
+                suggestList.style.display = 'none';
+            }
+        });
+    </script>
 </body>
 </html>
