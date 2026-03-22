@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# --- CSVデータの読み込み ---
+# --- CSVデータの読み込み (Jalan/Yahoo用) ---
 def load_hotel_db():
     raw_hotels = {}
     combined_db = {}
@@ -67,7 +67,7 @@ def format_distance_display(dist_km):
     if dist_km is None: return ""
     return f"{int(dist_km * 1000)}m" if dist_km < 1.0 else f"{round(dist_km, 1)}km"
 
-# 環境変数（AGODA_AIDに統一）
+# 環境変数
 RAKUTEN_APP_ID       = os.environ.get("RAKUTEN_APP_ID", "").strip()
 RAKUTEN_ACCESS_KEY   = os.environ.get("RAKUTEN_ACCESS_KEY", "").strip()
 RAKUTEN_AFFILIATE_ID = os.environ.get("RAKUTEN_AFFILIATE_ID", "").strip()
@@ -85,7 +85,6 @@ def index():
 
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
-
         if keyword:
             target_dest = None
             for d in dest_db:
@@ -94,36 +93,15 @@ def index():
                     target_dest = d
                     break
 
+            # 楽天APIへのリクエスト設定
             if target_dest and target_dest.get('lat') and target_dest.get('lng'):
                 api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
-                params = {
-                    "applicationId": RAKUTEN_APP_ID,
-                    "accessKey":     RAKUTEN_ACCESS_KEY,
-                    "affiliateId":   RAKUTEN_AFFILIATE_ID,
-                    "format":        "json",
-                    "latitude":      target_dest['lat'],
-                    "longitude":     target_dest['lng'],
-                    "searchRadius":  3.0,
-                    "datumType":     1,
-                    "hits":          21
-                }
+                params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "latitude": target_dest['lat'], "longitude": target_dest['lng'], "searchRadius": 3.0, "datumType": 1, "hits": 21}
             else:
                 api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
-                params = {
-                    "applicationId": RAKUTEN_APP_ID,
-                    "accessKey":     RAKUTEN_ACCESS_KEY,
-                    "affiliateId":   RAKUTEN_AFFILIATE_ID,
-                    "format":        "json",
-                    "keyword":       keyword,
-                    "hits":          21
-                }
+                params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "keyword": keyword, "hits": 21}
 
-            headers = {
-                "referer": SITE_URL + "/",
-                "origin": SITE_URL,
-                "user-agent": "Mozilla/5.0",
-                "accept": "application/json"
-            }
+            headers = {"referer": SITE_URL + "/", "origin": SITE_URL, "user-agent": "Mozilla/5.0", "accept": "application/json"}
 
             try:
                 res = requests.get(api_url, params=params, headers=headers, timeout=10)
@@ -135,6 +113,7 @@ def index():
                             rakuten_id = str(info.get("hotelNo"))
                             csv_match = hotel_db.get(rakuten_id, {})
 
+                            # 距離計算
                             dist_str = ""
                             dist_val = float('inf')
                             if target_dest and csv_match.get('lat'):
@@ -143,14 +122,21 @@ def index():
                                     dist_str = format_distance_display(d_km)
                                     dist_val = d_km
 
-                            clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', info.get("hotelName", "")).strip()
-                            search_enc = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
+                            # --- 【重要】ここが修正ポイント：表示されている宿の名前でリンクを作る ---
+                            # 宿名から余計な記号を削除（検索精度アップのため）
+                            raw_name = info.get("hotelName", "")
+                            clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', raw_name).strip()
+                            
+                            # 宿名単体、または宿名＋住所の一部で検索用エンコードを作成
+                            hotel_search_query = urllib.parse.quote(f"{clean_name} {info.get('address1', '')}")
 
-                            b_url = f"https://www.booking.com/searchresults.ja.html?ss={search_enc}"
+                            # Booking.com URL生成 (DB無視のハイブリッド)
+                            b_url = f"https://www.booking.com/searchresults.ja.html?ss={hotel_search_query}"
                             if BOOKING_AID:
                                 b_url += f"&aid={BOOKING_AID}"
 
-                            a_url = f"https://www.agoda.com/ja-jp/search?textToSearch={search_enc}"
+                            # Agoda URL生成 (DB無視のハイブリッド)
+                            a_url = f"https://www.agoda.com/ja-jp/search?textToSearch={hotel_search_query}"
                             if AGODA_AID:
                                 a_url += f"&cid={AGODA_AID}"
 
@@ -163,8 +149,9 @@ def index():
                                 "display_distance": dist_str,
                                 "dist_val": dist_val,
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_url": f"https://www.jalan.net/{csv_match.get('jalan_id')}/" if csv_match.get('jalan_id') else f"https://www.jalan.net/yad/?keyword={search_enc}",
-                                "yahoo_url": f"https://travel.yahoo.co.jp/{csv_match.get('yahoo_id')}/?ppc=2" if csv_match.get('yahoo_id') else f"https://travel.yahoo.co.jp/search-hotel/?keyword={search_enc}",
+                                # Jalan/YahooはDBを優先して、なければ名前検索へ
+                                "jalan_url": f"https://www.jalan.net/{csv_match.get('jalan_id')}/" if csv_match.get('jalan_id') else f"https://www.jalan.net/yad/?keyword={hotel_search_query}",
+                                "yahoo_url": f"https://travel.yahoo.co.jp/{csv_match.get('yahoo_id')}/?ppc=2" if csv_match.get('yahoo_id') else f"https://travel.yahoo.co.jp/search-hotel/?keyword={hotel_search_query}",
                                 "booking_url": b_url,
                                 "agoda_url": a_url,
                             })
