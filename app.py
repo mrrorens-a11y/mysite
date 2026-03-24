@@ -16,11 +16,9 @@ def load_pref_hotel_db(pref_code):
     if not pref_code:
         return combined_db
 
-    # 【修正箇所】タイポを直し、正しいファイルパスを生成
     file_name = f"{pref_code}.csv"
     hotels_path = os.path.join(BASE_DIR, file_name)
     
-    # Renderなどの環境で /hotels/ フォルダに置いている場合も考慮
     if not os.path.exists(hotels_path):
         hotels_path = os.path.join(BASE_DIR, "hotels", file_name)
 
@@ -54,7 +52,6 @@ def get_distance(lat1, lng1, lat2, lng2):
 
 def format_distance_display(dist_km):
     if dist_km is None: return ""
-    # 1km未満ならm表示、それ以上ならkm表示
     return f"{int(dist_km * 1000)}m" if dist_km < 1.0 else f"{round(dist_km, 1)}km"
 
 # 環境変数
@@ -79,27 +76,25 @@ def index():
             target_dest = None
             for d in dest_db:
                 d_name = d.get('name', '')
-                # 空の検索キーを無視して判定
                 keys = [k.strip() for k in d.get('search_keys', '').split(',') if k.strip()]
                 
-                # 目的地名そのもの、あるいは検索キーが含まれているか判定
                 if keyword == d_name or any(k in keyword for k in keys):
                     target_dest = d
                     print(f"DEBUG: Match found -> {d_name} ({d.get('pref_code')})")
                     break
 
+            # 【修正】dest_lat/dest_lng をループの外・前に定義（スコープ問題の解消）
+            dest_lat = target_dest.get('lat') if target_dest else None
+            dest_lng = target_dest.get('lng') if target_dest else None  # 【修正】'ng' タイポを削除
+
             if target_dest:
                 pref_code = target_dest.get('pref_code')
                 hotel_db = load_pref_hotel_db(pref_code)
-                
-                # 座標の取得
-                d_lat = target_dest.get('lat') or target_dest.get('latl')
-                d_lng = target_dest.get('lng') or target_dest.get('ng')
 
-                if d_lat and d_lng:
+                if dest_lat and dest_lng:
                     # 周辺検索API
                     api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
-                    params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "latitude": d_lat, "longitude": d_lng, "searchRadius": 3.0, "datumType": 1, "hits": 21}
+                    params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "latitude": dest_lat, "longitude": dest_lng, "searchRadius": 3.0, "datumType": 1, "hits": 21}
                 else:
                     # 座標がない場合のキーワード検索（安全策）
                     api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
@@ -124,10 +119,6 @@ def index():
                             # --- 距離計算 ---
                             dist_str = ""
                             dist_val = float('inf')
-                            # 目的地の座標
-                            dest_lat = target_dest.get('lat') or target_dest.get('latl') if target_dest else None
-                            dest_lng = target_dest.get('lng') or target_dest.get('ng') if target_dest else None
-                            # 宿の座標（CSV側）
                             h_lat = csv_match.get('lat') or info.get('latitude')
                             h_lng = csv_match.get('lng') or info.get('longitude')
                             
