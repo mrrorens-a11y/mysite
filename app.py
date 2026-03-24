@@ -16,16 +16,18 @@ def load_pref_hotel_db(pref_code):
     if not pref_code:
         return combined_db
 
-    hotels_path = os.path.join(BASE_DIR, f"{pref_code}.csv")
+    # ファイル名は小文字の pref_code.csv を想定
+    hotels_path = os.path.join(BASE_DIR, f"{pref_code.csv}")
     if not os.path.exists(hotels_path):
         hotels_path = os.path.join(BASE_DIR, "hotels", f"{pref_code}.csv")
 
     if os.path.exists(hotels_path):
         with open(hotels_path, mode='r', encoding='utf-8-sig') as f:
             for row in csv.DictReader(f):
-                r_id = row.get('rakuten_id', '').strip()
+                # 列名は前回の相談に基づき rakuten_id を想定
+                r_id = (row.get('rakuten_id') or "").strip()
                 if r_id:
-                    combined_db[r_id] = {k: v.strip() for k, v in row.items()}
+                    combined_db[r_id] = {k: (v or "").strip() for k, v in row.items()}
     return combined_db
 
 def load_destinations():
@@ -34,7 +36,8 @@ def load_destinations():
     if os.path.exists(csv_path):
         with open(csv_path, mode='r', encoding='utf-8-sig') as f:
             for row in csv.DictReader(f):
-                destinations.append({k: v.strip() for k, v in row.items()})
+                # v.strip() で落ちないよう (v or "") を追加
+                destinations.append({k: (v or "").strip() for k, v in row.items()})
     return destinations
 
 def get_distance(lat1, lng1, lat2, lng2):
@@ -73,26 +76,34 @@ def index():
         if keyword:
             target_dest = None
             for d in dest_db:
-                keys = d.get('search_keys', '').split(',')
-                if any(k.strip() in keyword for k in keys) or keyword in d.get('name', ''):
+                d_name = d.get('name', '')
+                # 【重要】空の検索キーを排除して判定
+                keys = [k.strip() for k in d.get('search_keys', '').split(',') if k.strip()]
+                
+                # 判定ロジックを強化：目的地名に完全一致、または有効なキーワードが含まれている場合
+                if keyword == d_name or any(k in keyword for k in keys):
                     target_dest = d
+                    print(f"DEBUG: Match found -> {d_name} ({d.get('pref_code')})") # Renderのログで確認用
                     break
 
-            # --- 【修正完了】バグを防ぐための堅牢な条件分岐 ---
+            # 楽天APIへのリクエスト設定
             if target_dest:
                 pref_code = target_dest.get('pref_code')
                 hotel_db = load_pref_hotel_db(pref_code)
                 
-                if target_dest.get('lat') and target_dest.get('lng'):
-                    # 座標がある場合：周辺検索
+                # latl ng のようなタイポがあっても動くように get() を使用
+                d_lat = target_dest.get('lat') or target_dest.get('latl')
+                d_lng = target_dest.get('lng') or target_dest.get('ng')
+
+                if d_lat and d_lng:
                     api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/SimpleHotelSearch/20170426"
-                    params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "latitude": target_dest['lat'], "longitude": target_dest['lng'], "searchRadius": 3.0, "datumType": 1, "hits": 21}
+                    params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "latitude": d_lat, "longitude": d_lng, "searchRadius": 3.0, "datumType": 1, "hits": 21}
                 else:
-                    # 【追加】目的地はあるが座標が未入力の場合：キーワード検索に逃がす（クラッシュ防止）
+                    # 目的地は見つかったが座標がない場合のバックアップ
                     api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
                     params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "keyword": keyword, "hits": 21}
             else:
-                # 目的地リストにないエリア検索の場合
+                # 目的地リストに全くない場合
                 api_url = "https://openapi.rakuten.co.jp/engine/api/Travel/KeywordHotelSearch/20170426"
                 params = {"applicationId": RAKUTEN_APP_ID, "accessKey": RAKUTEN_ACCESS_KEY, "affiliateId": RAKUTEN_AFFILIATE_ID, "format": "json", "keyword": keyword, "hits": 21}
 
@@ -106,37 +117,31 @@ def index():
                         for h in data["hotels"]:
                             info = h["hotel"][0]["hotelBasicInfo"]
                             rakuten_id = str(info.get("hotelNo"))
-                            
                             csv_match = hotel_db.get(rakuten_id, {})
 
                             # 距離計算
                             dist_str = ""
                             dist_val = float('inf')
-                            if target_dest and target_dest.get('lat') and csv_match.get('lat'):
-                                d_km = get_distance(csv_match['lat'], csv_match['lng'], target_dest['lat'], target_dest['lng'])
+                            d_lat = target_dest.get('lat') or target_dest.get('latl') if target_dest else None
+                            d_lng = target_dest.get('lng') or target_dest.get('ng') if target_dest else None
+                            
+                            if d_lat and csv_match.get('lat'):
+                                d_km = get_distance(csv_match['lat'], csv_match['lng'], d_lat, d_lng)
                                 if d_km is not None:
                                     dist_str = format_distance_display(d_km)
                                     dist_val = d_km
 
-                            # 宿名から余計な記号を削除
                             raw_name = info.get("hotelName", "")
                             clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', raw_name).strip()
-                            
-                            # 電話番号と住所を組み合わせた検索クエリ
                             search_address = csv_match.get('address') or info.get('address1', '')
                             search_tel = csv_match.get('tel', '')
                             search_text = f"{clean_name} {search_tel} {search_address}".strip()
                             hotel_search_query = urllib.parse.quote(search_text)
 
-                            # Booking.com URL生成
                             b_url = f"https://www.booking.com/searchresults.ja.html?ss={hotel_search_query}"
-                            if BOOKING_AID:
-                                b_url += f"&aid={BOOKING_AID}"
-
-                            # Agoda URL生成
+                            if BOOKING_AID: b_url += f"&aid={BOOKING_AID}"
                             a_url = f"https://www.agoda.com/ja-jp/search?textToSearch={hotel_search_query}"
-                            if AGODA_AID:
-                                a_url += f"&cid={AGODA_AID}"
+                            if AGODA_AID: a_url += f"&cid={AGODA_AID}"
 
                             hotels.append({
                                 "hotelName": info.get("hotelName"),
@@ -147,15 +152,13 @@ def index():
                                 "display_distance": dist_str,
                                 "dist_val": dist_val,
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                # 【安心ポイント】じゃらん/YahooのIDが無くても自動でキーワード検索リンクになります
                                 "jalan_url": f"https://www.jalan.net/{csv_match.get('jalan_id')}/" if csv_match.get('jalan_id') else f"https://www.jalan.net/yad/?keyword={hotel_search_query}",
                                 "yahoo_url": f"https://travel.yahoo.co.jp/{csv_match.get('yahoo_id')}/?ppc=2" if csv_match.get('yahoo_id') else f"https://travel.yahoo.co.jp/search-hotel/?keyword={hotel_search_query}",
                                 "booking_url": b_url,
                                 "agoda_url": a_url,
                             })
 
-                        # 近い順に並び替え
-                        if target_dest and target_dest.get('lat'):
+                        if target_dest and d_lat:
                             hotels.sort(key=lambda x: x['dist_val'])
 
             except Exception as e:
