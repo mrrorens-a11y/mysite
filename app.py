@@ -139,7 +139,17 @@ def index():
                             # リンクの組み立て
                             b_url = f"https://www.booking.com/searchresults.ja.html?ss={hotel_search_query}"
                             if BOOKING_AID: b_url += f"&aid={BOOKING_AID}"
-                            a_url = f"https://www.agoda.com/ja-jp/search?textToSearch={hotel_search_query}"
+
+                            # --- 【変更箇所】Agoda：宿名のみ＋緯度経度で検索 ---
+                            agoda_query = urllib.parse.quote(clean_name)
+                            a_url = (
+                                "https://www.agoda.com/ja-jp/search"
+                                f"?textToSearch={agoda_query}"
+                                f"&latitude={h_lat}"
+                                f"&longitude={h_lng}"
+                                "&rooms=1"
+                                "&adults=2"
+                            )
                             if AGODA_AID: a_url += f"&cid={AGODA_AID}"
 
                             hotels.append({
