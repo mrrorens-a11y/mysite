@@ -159,14 +159,14 @@
     <header>
         <a href="/" class="logo-container">
             <h1 class="logo">tomarun</h1>
-            <span class="sub-logo">TRAVEL COMPARISON</span>
+            <span class="sub-logo">観光地入力して周辺宿表示</span>
         </a>
     </header>
 
     <div class="search-section">
         <div class="autocomplete-wrapper">
             <form class="search-area" id="search-form" method="POST">
-                <input type="text" id="search-input" name="keyword" placeholder="どこに泊まる？" value="{{ keyword }}" autocomplete="off">
+                <input type="text" id="search-input" name="keyword" placeholder="観光地を入力" value="{{ keyword }}" autocomplete="off">
                 <button type="submit" id="search-btn">検索</button>
             </form>
             <div id="suggest-list" class="suggest-list"></div>
@@ -215,8 +215,9 @@
         {% endfor %}
     </div>
 
+    <script type="application/json" id="destinations-data">{{ destinations | tojson | safe }}</script>
     <script>
-        const destinations = {{ destinations | tojson | safe }};
+        const destinations = JSON.parse(document.getElementById('destinations-data').textContent);
         const searchInput = document.getElementById('search-input');
         const suggestList = document.getElementById('suggest-list');
         const searchForm = document.getElementById('search-form');
