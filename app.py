@@ -128,32 +128,47 @@ def index():
                                     dist_str = format_distance_display(d_km)
                                     dist_val = d_km
 
-                            # リンク生成用クエリ作成
+                            # 宿名から「^」や「＾」を消去してクリーンにする
                             raw_name = info.get("hotelName", "")
-                            clean_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', raw_name).strip()
+                            clean_name = raw_name.replace('^', '').replace('＾', '').strip()
+                            # 括弧内の補助情報を消す既存のロジック
+                            search_name = re.sub(r'[\(\（【［].*?[\)\）】］]', '', clean_name).strip()
+
                             search_address = csv_match.get('address') or info.get('address1', '')
                             search_tel = csv_match.get('tel', '')
-                            search_text = f"{clean_name} {search_tel} {search_address}".strip()
+                            search_text = f"{search_name} {search_tel} {search_address}".strip()
                             hotel_search_query = urllib.parse.quote(search_text)
 
-                            # リンクの組み立て
+                            # --- リンク出し分けロジック ---
+                            j_id = (csv_match.get('jalan_id') or "").strip()
+                            y_id = (csv_match.get('yahoo_id') or "").strip()
+
+                            # じゃらん: あり -> 宿ページ / なし -> トップ / ハイフン -> 無効
+                            if j_id == "-":
+                                j_url = "disabled"
+                            elif j_id:
+                                j_url = f"https://www.jalan.net/{j_id}/"
+                            else:
+                                j_url = "https://www.jalan.net/"
+
+                            # Yahoo!: あり -> 宿ページ / なし -> トップ / ハイフン -> 無効
+                            if y_id == "-":
+                                y_url = "disabled"
+                            elif y_id:
+                                y_url = f"https://travel.yahoo.co.jp/{y_id}/?ppc=2"
+                            else:
+                                y_url = "https://travel.yahoo.co.jp/"
+
                             b_url = f"https://www.booking.com/searchresults.ja.html?ss={hotel_search_query}"
                             if BOOKING_AID: b_url += f"&aid={BOOKING_AID}"
 
-                            # --- 【変更箇所】Agoda：宿名のみ＋緯度経度で検索 ---
-                            agoda_query = urllib.parse.quote(clean_name)
-                            a_url = (
-                                "https://www.agoda.com/ja-jp/search"
-                                f"?textToSearch={agoda_query}"
-                                f"&latitude={h_lat}"
-                                f"&longitude={h_lng}"
-                                "&rooms=1"
-                                "&adults=2"
-                            )
+                            # Agodaのロジックは維持
+                            agoda_query = urllib.parse.quote(search_name)
+                            a_url = f"https://www.agoda.com/ja-jp/search?textToSearch={agoda_query}&latitude={h_lat}&longitude={h_lng}&rooms=1&adults=2"
                             if AGODA_AID: a_url += f"&cid={AGODA_AID}"
 
                             hotels.append({
-                                "hotelName": info.get("hotelName"),
+                                "hotelName": clean_name, # クリーンな名前を使用
                                 "hotelImageUrl": info.get("hotelImageUrl"),
                                 "address1": info.get("address1", ""),
                                 "address2": info.get("address2", ""),
@@ -161,8 +176,8 @@ def index():
                                 "display_distance": dist_str,
                                 "dist_val": dist_val,
                                 "target_url": info.get("affiliateUrl") or info.get("hotelInformationUrl"),
-                                "jalan_url": f"https://www.jalan.net/{csv_match.get('jalan_id')}/" if csv_match.get('jalan_id') else f"https://www.jalan.net/yad/?keyword={hotel_search_query}",
-                                "yahoo_url": f"https://travel.yahoo.co.jp/{csv_match.get('yahoo_id')}/?ppc=2" if csv_match.get('yahoo_id') else f"https://travel.yahoo.co.jp/search-hotel/?keyword={hotel_search_query}",
+                                "jalan_url": j_url,
+                                "yahoo_url": y_url,
                                 "booking_url": b_url,
                                 "agoda_url": a_url,
                             })
