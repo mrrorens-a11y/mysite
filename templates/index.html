@@ -19,15 +19,28 @@
             --price-red: #d6001c;
             --apple-blue: #0071e3;
             --card-shadow: 0 12px 40px rgba(0,0,0,0.08);
+            --main-bg: #f5f5f7;
+            --main-text: #1d1d1f;
+            --sub-text: #86868b;
+            --card-bg: #ffffff;
+            --surface-bg: #ffffff;
+            --surface-border: #d2d2d7;
+            --unified-bg: #cae5d3;
+            --unified-text: #1d1d1f;
+            --booking-bg: #9cc9e5;
+            --booking-text: #1d1d1f;
+            --disabled-bg: #e5e5e7;
+            --disabled-text: #a1a1a6;
         }
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            background-color: var(--apple-bg);
+            background-color: var(--main-bg);
             margin: 0 auto;
             max-width: 500px;
-            color: var(--text-main);
+            color: var(--main-text);
             -webkit-font-smoothing: antialiased;
+            transition: all 0.8s ease;
         }
         header {
             background: rgba(255,255,255,0.85);
@@ -40,8 +53,8 @@
             border-bottom: 1px solid rgba(0,0,0,0.1);
         }
         .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
-        .logo { font-size: 2.2rem; margin: 0; color: var(--text-main); }
-        .sub-logo { font-size: 10px; color: var(--text-sub); letter-spacing: 0.1em; }
+        .logo { font-size: 2.2rem; margin: 0; color: var(--main-text); transition: all 0.8s ease; }
+        .sub-logo { font-size: 10px; color: var(--sub-text); letter-spacing: 0.1em; transition: all 0.8s ease; }
 
         .search-section { padding: 28px 22px 12px; }
         .autocomplete-wrapper { position: relative; width: 100%; }
@@ -49,13 +62,14 @@
         .search-area {
             display: flex;
             gap: 8px;
-            background: white;
+            background: var(--surface-bg);
             padding: 6px;
             border-radius: 14px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-            border: 1px solid #d2d2d7;
+            border: 1px solid var(--surface-border);
             position: relative;
             z-index: 2;
+            transition: all 0.8s ease;
         }
         input {
             flex: 1;
@@ -81,14 +95,15 @@
             top: 100%;
             left: 0;
             right: 0;
-            background: white;
+            background: var(--surface-bg);
             border-radius: 14px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.12);
             margin-top: 8px;
             z-index: 1000;
             overflow: hidden;
             display: none;
-            border: 1px solid #d2d2d7;
+            border: 1px solid var(--surface-border);
+            transition: all 0.8s ease;
         }
         .suggest-item {
             padding: 12px 16px;
@@ -98,21 +113,22 @@
             transition: background 0.2s;
         }
         .suggest-item:last-child { border-bottom: none; }
-        .suggest-item:hover, .suggest-item:active { background: #f5f5f7; }
+        .suggest-item:hover, .suggest-item:active { background: var(--main-bg); }
 
         .hotel-container { min-height: 60vh; }
 
         .hotel-card {
-            background: white;
+            background: var(--card-bg);
             border-radius: 20px;
             margin: 16px;
             overflow: hidden;
             box-shadow: var(--card-shadow);
+            transition: all 0.8s ease;
         }
         .hotel-img { width: 100%; height: 220px; object-fit: cover; display: block; }
         .hotel-info { padding: 22px 22px 24px; }
         .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 6px; line-height: 1.45; }
-        .hotel-address { font-size: 12px; color: var(--text-sub); margin-bottom: 18px; line-height: 1.5; }
+        .hotel-address { font-size: 12px; color: var(--sub-text); margin-bottom: 18px; line-height: 1.5; transition: all 0.8s ease; }
 
         /* ボタンコンテナ全体 */
         .ota-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
@@ -129,21 +145,22 @@
             transition: background-color 0.2s, opacity 0.2s; min-height: 52px;
             border: 1px solid rgba(0,0,0,0.05);
             box-sizing: border-box;
+            transition: all 0.8s ease;
         }
 
         /* 楽天・じゃらん・Yahoo! 統一（モーニング・ウイング） */
         .btn-unified {
-            background-color: #cae5d3;
-            color: #1d1d1f;
+            background-color: var(--unified-bg);
+            color: var(--unified-text);
         }
         .btn-unified .ota-name {
-            color: #1d1d1f;
+            color: var(--unified-text);
             font-size: 11px;
             font-weight: 700;
             letter-spacing: -0.02em;
         }
         .btn-unified .ota-price {
-            color: #1d1d1f;
+            color: var(--unified-text);
             font-size: 10px;
             font-weight: 600;
             opacity: 0.92;
@@ -152,8 +169,8 @@
 
         /* Booking（リフレッシュ・ブルー・3列グリッド幅に合わせたスリム行） */
         .btn-booking {
-            background-color: #9cc9e5;
-            color: #1d1d1f;
+            background-color: var(--booking-bg);
+            color: var(--booking-text);
             width: 100%;
             border-radius: 12px;
             min-height: 0;
@@ -172,14 +189,15 @@
 
         /* グレーアウト（販売なし） */
         .btn-disabled {
-            background-color: #e5e5e7;
-            color: #a1a1a6;
+            background-color: var(--disabled-bg);
+            color: var(--disabled-text);
             opacity: 0.6;
             pointer-events: none;
             border: 1px solid rgba(0,0,0,0.05);
             border-radius: 12px;
+            transition: all 0.8s ease;
         }
-        .btn-disabled .ota-name, .btn-disabled .ota-price { color: #a1a1a6; }
+        .btn-disabled .ota-name, .btn-disabled .ota-price { color: var(--disabled-text); }
 
         /* Agoda非表示 */
         .agoda-hidden { display: none; }
@@ -201,6 +219,19 @@
         .sub-divider {
             color: #d2d2d7;
             font-size: 12px;
+        }
+
+        body.dark-mode {
+            --main-bg: #4b7a7c;
+            --main-text: #ffffff;
+            --sub-text: #e5eaee;
+            --card-bg: #63676b;
+            --surface-bg: #63676b;
+            --surface-border: rgba(255,255,255,0.22);
+            --unified-bg: #d2d5ec;
+            --unified-text: #1d1d1f;
+            --disabled-bg: #8b8f93;
+            --disabled-text: #eef2f5;
         }
     </style>
 </head>
@@ -321,6 +352,14 @@
                 suggestList.style.display = 'none';
             }
         });
+
+        function applyNightModeByTime() {
+            const hour = new Date().getHours();
+            const isNight = (hour >= 21 || hour < 5);
+            document.body.classList.toggle('dark-mode', isNight);
+        }
+
+        applyNightModeByTime();
     </script>
 
     <footer style="padding: 40px 20px; text-align: center; color: #86868b; font-size: 10px; line-height: 1.6; border-top: 1px solid #d2d2d7; margin-top: 100px; background: transparent;">
