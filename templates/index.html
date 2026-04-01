@@ -31,6 +31,8 @@
             --booking-text: #1d1d1f;
             --disabled-bg: #e5e5e7;
             --disabled-text: #a1a1a6;
+            --control-border: rgba(0,0,0,0.05);
+            --theme-transition: all 1.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
         * { box-sizing: border-box; }
         body {
@@ -40,7 +42,7 @@
             max-width: 500px;
             color: var(--main-text);
             -webkit-font-smoothing: antialiased;
-            transition: all 0.8s ease;
+            transition: var(--theme-transition);
         }
         header {
             background: rgba(255,255,255,0.85);
@@ -53,8 +55,8 @@
             border-bottom: 1px solid rgba(0,0,0,0.1);
         }
         .logo-container { text-decoration: none; display: flex; flex-direction: column; align-items: center; }
-        .logo { font-size: 2.2rem; margin: 0; color: var(--main-text); transition: all 0.8s ease; }
-        .sub-logo { font-size: 10px; color: var(--sub-text); letter-spacing: 0.1em; transition: all 0.8s ease; }
+        .logo { font-size: 2.2rem; margin: 0; color: var(--main-text); transition: var(--theme-transition); }
+        .sub-logo { font-size: 10px; color: var(--sub-text); letter-spacing: 0.1em; transition: var(--theme-transition); }
 
         .search-section { padding: 28px 22px 12px; }
         .autocomplete-wrapper { position: relative; width: 100%; }
@@ -69,7 +71,7 @@
             border: 1px solid var(--surface-border);
             position: relative;
             z-index: 2;
-            transition: all 0.8s ease;
+            transition: var(--theme-transition);
         }
         input {
             flex: 1;
@@ -80,7 +82,7 @@
             background: transparent;
         }
         button#search-btn {
-            background: var(--text-main);
+            background: var(--apple-blue);
             color: white;
             border: none;
             padding: 0 20px;
@@ -103,7 +105,7 @@
             overflow: hidden;
             display: none;
             border: 1px solid var(--surface-border);
-            transition: all 0.8s ease;
+            transition: var(--theme-transition);
         }
         .suggest-item {
             padding: 12px 16px;
@@ -123,12 +125,12 @@
             margin: 16px;
             overflow: hidden;
             box-shadow: var(--card-shadow);
-            transition: all 0.8s ease;
+            transition: var(--theme-transition);
         }
         .hotel-img { width: 100%; height: 220px; object-fit: cover; display: block; }
         .hotel-info { padding: 22px 22px 24px; }
         .hotel-name { font-size: 17px; font-weight: 700; margin: 0 0 6px; line-height: 1.45; }
-        .hotel-address { font-size: 12px; color: var(--sub-text); margin-bottom: 18px; line-height: 1.5; transition: all 0.8s ease; }
+        .hotel-address { font-size: 12px; color: var(--sub-text); margin-bottom: 18px; line-height: 1.5; transition: var(--theme-transition); }
 
         /* ボタンコンテナ全体 */
         .ota-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 4px; }
@@ -142,10 +144,9 @@
         .ota-btn {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             text-decoration: none; border-radius: 12px; padding: 12px 8px; gap: 4px;
-            transition: background-color 0.2s, opacity 0.2s; min-height: 52px;
-            border: 1px solid rgba(0,0,0,0.05);
+            transition: var(--theme-transition); min-height: 52px;
+            border: 1px solid var(--control-border);
             box-sizing: border-box;
-            transition: all 0.8s ease;
         }
 
         /* 楽天・じゃらん・Yahoo! 統一（モーニング・ウイング） */
@@ -181,9 +182,9 @@
             text-decoration: none;
             font-weight: 700;
             font-size: 12px;
-            border: 1px solid rgba(0,0,0,0.05);
+            border: 1px solid var(--control-border);
             box-sizing: border-box;
-            transition: background-color 0.2s, opacity 0.2s;
+            transition: var(--theme-transition);
         }
         .btn-booking:active { opacity: 0.92; }
 
@@ -193,9 +194,9 @@
             color: var(--disabled-text);
             opacity: 0.6;
             pointer-events: none;
-            border: 1px solid rgba(0,0,0,0.05);
+            border: 1px solid var(--control-border);
             border-radius: 12px;
-            transition: all 0.8s ease;
+            transition: var(--theme-transition);
         }
         .btn-disabled .ota-name, .btn-disabled .ota-price { color: var(--disabled-text); }
 
@@ -222,16 +223,20 @@
         }
 
         body.dark-mode {
-            --main-bg: #4b7a7c;
-            --main-text: #ffffff;
-            --sub-text: #e5eaee;
-            --card-bg: #63676b;
-            --surface-bg: #63676b;
-            --surface-border: rgba(255,255,255,0.22);
-            --unified-bg: #d2d5ec;
-            --unified-text: #1d1d1f;
-            --disabled-bg: #8b8f93;
-            --disabled-text: #eef2f5;
+            --main-bg: #0a0f14;
+            --main-text: #e1e7ef;
+            --sub-text: #b5c3d1;
+            --card-bg: #1c252e;
+            --surface-bg: #1c252e;
+            --surface-border: #2d3944;
+            --unified-bg: #253441;
+            --unified-text: #e1e7ef;
+            --booking-bg: #4f96cf;
+            --booking-text: #e1e7ef;
+            --apple-blue: #5eaade;
+            --disabled-bg: #2a333d;
+            --disabled-text: #9ba9b8;
+            --control-border: #2d3944;
         }
     </style>
 </head>
@@ -360,6 +365,7 @@
         }
 
         applyNightModeByTime();
+        setInterval(applyNightModeByTime, 60000);
     </script>
 
     <footer style="padding: 40px 20px; text-align: center; color: #86868b; font-size: 10px; line-height: 1.6; border-top: 1px solid #d2d2d7; margin-top: 100px; background: transparent;">
