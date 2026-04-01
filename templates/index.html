@@ -238,6 +238,26 @@
             --disabled-text: #9ba9b8;
             --control-border: #2d3944;
         }
+
+        body.dark-mode input,
+        body.dark-mode textarea,
+        body.dark-mode select {
+            color: #e1e7ef;
+            border: 1px solid #2d3944;
+            background-color: #1c252e;
+            transition: var(--theme-transition);
+        }
+
+        body.dark-mode header {
+            background: #1c252e;
+            border-bottom: 1px solid #2d3944;
+            transition: var(--theme-transition);
+        }
+
+        body.dark-mode .sub-logo {
+            color: #e1e7ef;
+            transition: var(--theme-transition);
+        }
     </style>
 </head>
 <body>
