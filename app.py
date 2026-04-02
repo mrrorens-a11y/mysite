@@ -9,12 +9,18 @@ from flask import Flask, render_template, request
 app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+_destinations_cache = None
+_pref_hotel_db_cache = {}
 
 # --- 都道府県別の宿データを動的に読み込む ---
 def load_pref_hotel_db(pref_code):
-    combined_db = {}
     if not pref_code:
-        return combined_db
+        return {}
+
+    if pref_code in _pref_hotel_db_cache:
+        return _pref_hotel_db_cache[pref_code]
+
+    combined_db = {}
 
     file_name = f"{pref_code}.csv"
     hotels_path = os.path.join(BASE_DIR, file_name)
@@ -28,6 +34,7 @@ def load_pref_hotel_db(pref_code):
                 r_id = (row.get('rakuten_id') or "").strip()
                 if r_id:
                     combined_db[r_id] = {k: (v or "").strip() for k, v in row.items()}
+    _pref_hotel_db_cache[pref_code] = combined_db
     return combined_db
 
 def load_destinations():
@@ -38,6 +45,12 @@ def load_destinations():
             for row in csv.DictReader(f):
                 destinations.append({k: (v or "").strip() for k, v in row.items()})
     return destinations
+
+def get_destinations():
+    global _destinations_cache
+    if _destinations_cache is None:
+        _destinations_cache = load_destinations()
+    return _destinations_cache
 
 def get_distance(lat1, lng1, lat2, lng2):
     try:
@@ -62,8 +75,6 @@ SITE_URL             = os.environ.get("SITE_URL", "https://mysite-l8l0.onrender.
 BOOKING_AID          = os.environ.get("BOOKING_AID", "").strip()
 AGODA_AID            = os.environ.get("AGODA_AID", "").strip()
 
-dest_db  = load_destinations()
-
 @app.route("/", methods=["GET", "POST"])
 def index():
     hotels  = []
@@ -73,6 +84,7 @@ def index():
     if request.method == "POST":
         keyword = request.form.get("keyword", "").strip()
         if keyword:
+            dest_db = get_destinations()
             target_dest = None
             for d in dest_db:
                 d_name = d.get('name', '')
@@ -189,7 +201,8 @@ def index():
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
-    return render_template("index.html", hotels=hotels, keyword=keyword, destinations=dest_db)
+    destinations = _destinations_cache if _destinations_cache is not None else []
+    return render_template("index.html", hotels=hotels, keyword=keyword, destinations=destinations)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
