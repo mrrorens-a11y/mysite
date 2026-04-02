@@ -10,6 +10,7 @@ app = Flask(__name__)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 _destinations_cache = None
+_destinations_light_cache = None
 _pref_hotel_db_cache = {}
 
 # --- 都道府県別の宿データを動的に読み込む ---
@@ -51,6 +52,34 @@ def get_destinations():
     if _destinations_cache is None:
         _destinations_cache = load_destinations()
     return _destinations_cache
+
+def get_destinations_light():
+    global _destinations_light_cache
+    if _destinations_light_cache is not None:
+        return _destinations_light_cache
+
+    if _destinations_cache is not None:
+        _destinations_light_cache = [
+            {
+                "name": d.get("name", ""),
+                "search_keys": d.get("search_keys", ""),
+            }
+            for d in _destinations_cache
+        ]
+        return _destinations_light_cache
+
+    destinations_light = []
+    csv_path = os.path.join(BASE_DIR, 'destinations.csv')
+    if os.path.exists(csv_path):
+        with open(csv_path, mode='r', encoding='utf-8-sig') as f:
+            for row in csv.DictReader(f):
+                destinations_light.append({
+                    "name": (row.get("name") or "").strip(),
+                    "search_keys": (row.get("search_keys") or "").strip(),
+                })
+
+    _destinations_light_cache = destinations_light
+    return _destinations_light_cache
 
 def get_distance(lat1, lng1, lat2, lng2):
     try:
@@ -201,7 +230,7 @@ def index():
             except Exception as e:
                 print("SYSTEM ERROR:", e)
 
-    destinations = _destinations_cache if _destinations_cache is not None else []
+    destinations = get_destinations_light()
     return render_template("index.html", hotels=hotels, keyword=keyword, destinations=destinations)
 
 if __name__ == "__main__":
